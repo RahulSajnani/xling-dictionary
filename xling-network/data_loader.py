@@ -14,6 +14,8 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from helper_functions import *
 from transformers import AutoTokenizer
+# from torchtext.data import Field, TabularDataset, BucketIterator, Iterator
+
 
 class XLingual_loader(Dataset):
 
@@ -36,10 +38,15 @@ class XLingual_loader(Dataset):
         print("Dataset loaded !!")
 
         print(len(self.dataset_json))
-        # Tokenizer for Indian languages
-        self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length = 128, min_seq_length = 128)
-        self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
+        
+        
+        self.max_seq_length = 128
 
+        # Tokenizer for Indian languages
+
+        self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length = self.max_seq_length)
+        self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
+        
 
     def __getitem__(self, idx):
         '''
@@ -48,11 +55,48 @@ class XLingual_loader(Dataset):
         Arguments:
             idx - text index 
         '''
-        print(self.dataset_json[idx])
 
         data = self.convert_dict_2_features(self.dataset_json[idx])
         
         return self.input_to_tensor(data) 
+
+
+    def preprocess_tokens(self, input_tokens):
+        '''
+        Function to add special tags for bert and padd to max length 
+        
+        Arguments:
+            feature_dictionary - Feature dictionary with input_ids, attention mask and type ids
+
+        Return:
+            tokens_dictionary - Padded features
+        '''
+
+        out = {}
+        tokens = input_tokens
+        
+        special_tokens_count = self.tokenizer.num_special_tokens_to_add()
+        if len(tokens) > self.max_seq_length - special_tokens_count:
+            tokens = tokens[: (self.max_seq_length - special_tokens_count)]
+        
+        #  Adding CLS and SEP tokens
+        tokens = [self.tokenizer.cls_token] + tokens + [self.tokenizer.sep_token]
+        token_type_ids  = [0]*len(tokens)
+        attention_mask  = [1]*len(tokens)
+
+        len_before_padd = len(tokens)
+
+        # Adding pad tokens
+        tokens = tokens + [self.tokenizer.pad_token] * (self.max_seq_length - len_before_padd)
+        token_type_ids += [0] * (self.max_seq_length - len_before_padd)
+        attention_mask += [0] * (self.max_seq_length - len_before_padd)
+        
+        
+        out["input_ids"]      = self.tokenizer.convert_tokens_to_ids(tokens)
+        out["token_type_ids"] = token_type_ids
+        out["attention_mask"] = attention_mask
+        
+        return out
 
     def convert_dict_2_features(self, text_dict):
         '''
@@ -66,11 +110,15 @@ class XLingual_loader(Dataset):
         '''
 
         data = {}
+
         
-        data["phrase"]    = text_dict["Source_text"]
-        data["target"]    = text_dict["Target_keyword"]
+        src_tokens    = self.tokenizer.tokenize(text_dict["Source_text"])
+        target_tokens = self.tokenizer.tokenize(text_dict["Target_keyword"])
         data["src_id"]    = self.language_ids[text_dict["Source_ID"]]
-        data["target_id"] = self.language_ids[text_dict["Target_ID"]]
+        data["target_id"] = self.language_ids[text_dict["Target_ID"]]        
+        
+        data["phrase"] = self.preprocess_tokens(src_tokens)
+        data["target"] = self.preprocess_tokens(target_tokens)
 
         return data
 
@@ -89,35 +137,32 @@ class XLingual_loader(Dataset):
         '''
         Convert inputs to tensor
         '''
-        out_dictionary = {}
-            
-        out_dictionary["input"]  = self.tokenizer(data["phrase"], padding = True)
-        out_dictionary["target"] = self.tokenizer(data["target"], padding = True)
+        out = {}
+        for key in data:
+            if isinstance(data[key], dict):
+                if (out.get(key) is None):
+                    out[key] = {}
 
-        # Language ids
-        out_dictionary["src_id"]    = data["src_id"]
-        out_dictionary["target_id"] = data["target_id"]
-
-        print("check")
-        # for keyword in out_dictionary:
-        #     print("hello")
-        #     if isinstance(out_dictionary[keyword], dict):
-        #         print("lol")
-
-        return out_dictionary   
+                for key_2 in data[key]:
+                    out[key][key_2] = torch.tensor(data[key][key_2], dtype=torch.int)
+            else:
+                out[key] = torch.tensor([data[key]], dtype=torch.int)
+        
+        return out   
 
 
    
 if __name__ == "__main__":
 
-    dataset_path = "../xling-dictionary/data/temp_data.json"
+    dataset_path = "../data/temp_data.json"
 
     dataset = XLingual_loader(dataset_path = dataset_path)
-    print(dataset[0])
-    # data_loader = DataLoader(dataset, batch_size = 2, shuffle=True)
+    # print(dataset[0])
+    data_loader = DataLoader(dataset, batch_size = 8, shuffle=True)
 
-    # for batch, data in enumerate(data_loader):
-
-    #     for key in data:
-
-    #         print(key, data[key])
+    for batch, data in enumerate(data_loader):
+        text = ""
+        for key in data:
+            text = text + " " + key
+        
+        print(batch, text)
