@@ -17,9 +17,9 @@ import argparse
 def create_index(fasttext_model_path, index_path, vocab_path, cache_dir, batch_size=128):
     
 
-    
+
     ft_model = fasttext.load_model(fasttext_model_path)
-    words = ft_model.words #["rahul", "player", "boy"]
+    words = ft_model.words #  ["rahul", "player", "boy"] 
 
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length=5)
     model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir)
@@ -28,8 +28,8 @@ def create_index(fasttext_model_path, index_path, vocab_path, cache_dir, batch_s
     i = 0
     while i < len(words):
         batch = words[i:i + batch_size]
-        tokens = tokenizer(batch)
-        outputs = model(torch.tensor(tokens["input_ids"]))
+        tokens = tokenizer(batch, truncation=True, padding=True)
+        outputs = model(torch.tensor(tokens["input_ids"]).unsqueeze(0), attention_mask = torch.tensor(tokens["attention_mask"]).unsqueeze(0), token_type_ids = torch.tensor(tokens["token_type_ids"]).unsqueeze(0))
         embeddings = torch.mean(outputs[1], 1).detach().numpy()
         index.add(embeddings)
         i += batch_size
