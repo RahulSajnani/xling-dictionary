@@ -17,8 +17,7 @@ from transformers import AutoTokenizer
 # from torchtext.data import Field, TabularDataset, BucketIterator, Iterator
 
 
-class XLingual_loader(Dataset):
-
+class XLingualLoader(Dataset):
     '''
     Reverse dictionary data loader
     '''
@@ -29,13 +28,11 @@ class XLingual_loader(Dataset):
 
         Arguments:
             dataset_path - path to json data
-        
-
         '''
 
         print("Loading dataset......")
         self.dataset_json = read_json_file(dataset_path)
-        print("Dataset loaded !!")
+        print("Dataset loaded!")
 
         print(len(self.dataset_json))
         
@@ -44,7 +41,7 @@ class XLingual_loader(Dataset):
 
         # Tokenizer for Indian languages
 
-        self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length = self.max_seq_length)
+        self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length=self.max_seq_length)
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
         
 
@@ -156,9 +153,9 @@ if __name__ == "__main__":
 
     dataset_path = "../data/temp_data.json"
 
-    dataset = XLingual_loader(dataset_path = dataset_path)
+    dataset = XLingualLoader(dataset_path=dataset_path)
     # print(dataset[0])
-    data_loader = DataLoader(dataset, batch_size = 8, shuffle=True)
+    data_loader = DataLoader(dataset, batch_size=8, shuffle=True)
 
     for batch, data in enumerate(data_loader):
         text = ""
