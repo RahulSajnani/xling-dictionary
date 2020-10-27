@@ -38,13 +38,18 @@ def create_index(words, index_path, vocab_path, cache_dir, batch_size=128):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("word_list", type=argparse.FileType('r'))
     parser.add_argument("lang", type=str)
     parser.add_argument("index_dir", type=str)
     parser.add_argument("encoder_cache_dir", type=str)
 
     args = parser.parse_args()
 
-    create_index(args.fasttext_model, 
+    words = list()
+    for line in args.word_list:
+        words.append(line.strip())
+
+    create_index(words, 
                     os.path.join(args.index_dir, args.lang + ".index"), 
                     os.path.join(args.index_dir, args.lang + ".vocab"),
                     args.encoder_cache_dir)
