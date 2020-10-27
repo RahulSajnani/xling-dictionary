@@ -20,13 +20,16 @@ def create_index(words, index_path, vocab_path, cache_dir, batch_size=128):
 
     index = faiss.IndexFlatL2(model.config.hidden_size)
     i = 0
+    j = 0
     while i < len(words):
         batch = words[i:i + batch_size]
         tokens = tokenizer(batch, truncation=True, padding=True, return_tensors="pt")
         outputs = model(**tokens)
         embeddings = torch.mean(outputs.last_hidden_state, 1).detach().numpy()
         index.add(embeddings)
+        j += 1
         i += batch_size
+        print("batch {} done".format(j))
     
     faiss.write_index(index_path)
 
