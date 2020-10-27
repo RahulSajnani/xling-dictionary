@@ -14,27 +14,25 @@ from transformers import AutoTokenizer, AutoModel
 import fasttext
 import argparse
 
-def create_index(words, index_path, vocab_path, cache_dir, batch_size=128):
+def create_index(words, index_path, vocab_path, cache_dir, batch_size=1024):
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length=5)
     model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir, return_dict=True)
 
+    res = faiss.StandardGpuResources()
     index = faiss.IndexFlatL2(model.config.hidden_size)
+    gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
     i = 0
-    j = 0
     while i < len(words):
         batch = words[i:i + batch_size]
         tokens = tokenizer(batch, truncation=True, padding=True, return_tensors="pt")
         outputs = model(**tokens)
-        embeddings = torch.mean(outputs.last_hidden_state, 1).detach().numpy()
-        index.add(embeddings)
-        j += 1
+        embeddings = torch.mean(outputs.last_hidden_state, 1)
+        gpu_index.add(embeddings)
         i += batch_size
-        print("batch {} done".format(j))
+        print("{} words done".format(gpu_index.ntotal))
     
-    faiss.write_index(index_path)
-
-    with open(vocab_path, 'w') as f:
-        f.write('\n'.join(words) + '\n')
+    index = faiss.index_gpu_to_cpu(gpu_index)
+    faiss.write_index(index, index_path)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=True)
