@@ -14,13 +14,7 @@ from transformers import AutoTokenizer, AutoModel
 import fasttext
 import argparse
 
-def create_index(fasttext_model_path, index_path, vocab_path, cache_dir, batch_size=128):
-    
-
-
-    ft_model = fasttext.load_model(fasttext_model_path)
-    words = ft_model.words
-
+def create_index(words, index_path, vocab_path, cache_dir, batch_size=128):
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length=5)
     model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir, return_dict=True)
 
@@ -40,9 +34,7 @@ def create_index(fasttext_model_path, index_path, vocab_path, cache_dir, batch_s
         f.write('\n'.join(words) + '\n')
     
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument("fasttext_model", type=str)
     parser.add_argument("lang", type=str)
     parser.add_argument("index_dir", type=str)
     parser.add_argument("encoder_cache_dir", type=str)
