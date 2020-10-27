@@ -19,18 +19,18 @@ def create_index(fasttext_model_path, index_path, vocab_path, cache_dir, batch_s
 
 
     ft_model = fasttext.load_model(fasttext_model_path)
-    words = ft_model.words #  ["rahul", "player", "boy"] 
+    words = ft_model.words
 
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length=5)
-    model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir)
+    model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir, return_dict=True)
 
     index = faiss.IndexFlatL2(model.config.hidden_size)
     i = 0
     while i < len(words):
         batch = words[i:i + batch_size]
-        tokens = tokenizer(batch, truncation=True, padding=True)
-        outputs = model(torch.tensor(tokens["input_ids"]).unsqueeze(0), attention_mask = torch.tensor(tokens["attention_mask"]).unsqueeze(0), token_type_ids = torch.tensor(tokens["token_type_ids"]).unsqueeze(0))
-        embeddings = torch.mean(outputs[1], 1).detach().numpy()
+        tokens = tokenizer(batch, truncation=True, padding=True, return_tensors="pt")
+        outputs = model(**tokens)
+        embeddings = torch.mean(outputs.last_hidden_state, 1).detach().numpy()
         index.add(embeddings)
         i += batch_size
     
@@ -42,10 +42,10 @@ def create_index(fasttext_model_path, index_path, vocab_path, cache_dir, batch_s
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument("--fasttext_model", type=str)
-    parser.add_argument("--lang", type=str)
-    parser.add_argument("--index_dir", type=str)
-    parser.add_argument("--encoder_cache_dir", type=str)
+    parser.add_argument("fasttext_model", type=str)
+    parser.add_argument("lang", type=str)
+    parser.add_argument("index_dir", type=str)
+    parser.add_argument("encoder_cache_dir", type=str)
 
     args = parser.parse_args()
 
