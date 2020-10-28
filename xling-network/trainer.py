@@ -32,7 +32,7 @@ class XlingualDictionary(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, y =  batch["phrase"], batch["target"]
-        outputs = self.encoder(x)
+        outputs = self.encoder(**x)
         sequence_outputs = outputs[0]
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
@@ -44,7 +44,7 @@ class XlingualDictionary(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y =  batch["phrase"], batch["target"]
-        outputs = self.encoder(x)
+        outputs = self.encoder(**x)
         sequence_outputs = outputs[0]
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
@@ -70,13 +70,13 @@ if __name__=="__main__":
 
     args = parser.parse_args()
 
-    train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_path)
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_dir)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=10)
 
-    val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_path)
-    val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=True)
+    val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_dir)
+    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10)
 
-    trainer = pl.Trainer(gpus=1, max_epochs=args.n_epocs)
+    trainer = pl.Trainer(gpus=1, max_epochs=args.n_epochs)
     encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=args.encoder_cache_dir, return_dict=True)
     map_network = torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
     model = XlingualDictionary(encoder, map_network)

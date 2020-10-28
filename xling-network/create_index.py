@@ -14,17 +14,19 @@ from transformers import AutoTokenizer, AutoModel
 import fasttext
 import argparse
 
-def create_index(words, index_path, vocab_path, cache_dir, batch_size=1024):
-    tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert", max_seq_length=5)
+def create_index(words, index_path, vocab_path, cache_dir, batch_size=64):
+    tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
     model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir, return_dict=True)
+    model.to('cuda')
 
     index = faiss.IndexFlatL2(model.config.hidden_size)
     i = 0
     while i < len(words):
         batch = words[i:i + batch_size]
-        tokens = tokenizer(batch, truncation=True, padding=True, return_tensors="pt")
+        tokens = tokenizer(batch, truncation=True, padding=True, max_length=10, return_tensors="pt")
+        tokens.to('cuda')
         outputs = model(**tokens)
-        embeddings = torch.mean(outputs.last_hidden_state, 1)
+        embeddings = torch.mean(outputs.last_hidden_state, 1).detach().cpu().numpy()
         index.add(embeddings)
         i += batch_size
         print("{} words done".format(index.ntotal))

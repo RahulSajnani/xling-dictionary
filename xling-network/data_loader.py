@@ -44,14 +44,17 @@ class XLingualTrainDataset(Dataset):
 
             for d in dataset:
                 if lang_map[d["Target_ID"]] == lang:
-                    self.training_pairs.append({
+                    try:
+                        self.training_pairs.append({
                                                 "phrase": self.tokenizer(d["Source_text"], 
-                                                            padding=True, 
+                                                            padding="max_length", 
                                                             truncation=True, 
                                                             max_length=self.max_seq_length,
                                                             return_tensors="pt"), 
                                                 "target": index.reconstruct(word2idx[d["Target_keyword"]])
                                                 })
+                    except KeyError:
+                        print(d["Target_keyword"] + " not found")
         
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
         
@@ -136,7 +139,7 @@ class XLingualTrainDataset(Dataset):
         Returns length of dataset
         '''
         
-        return len(self.dataset_json)
+        return len(self.training_pairs)
 
 
     def input_to_tensor(self, data):
@@ -294,8 +297,5 @@ if __name__ == "__main__":
     data_loader = DataLoader(dataset, batch_size=8, shuffle=True)
 
     for batch, data in enumerate(data_loader):
-        text = ""
-        for key in data:
-            text = text + " " + key
+        print(batch, data)
         
-        print(batch, text)
