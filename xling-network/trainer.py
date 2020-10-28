@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+import argparse
 
 import torch
 import pytorch_lightning as pl
@@ -6,13 +6,14 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, random_split
 import data_loader
 import faiss
+from transformers import AdamW, AutoModel
 
 class XlingualDictionary(pl.LightningModule):
     '''
     Cross lingual dictionary model
     '''
 
-    def __init__(self, xling_encoder, map_network, learning_rate=1e-3, dataset_path="../data/temp_data.json"):
+    def __init__(self, xling_encoder, map_network):
         
         super().__init__()
         
@@ -21,7 +22,6 @@ class XlingualDictionary(pl.LightningModule):
         self.map = map_network
 
     def forward(self, x, target_lang, index_paths):
-        
         outputs = self.encoder(x)
         sequence_outputs = outputs[0]
         sequence_embedding = torch.mean(sequence_outputs, 1)
@@ -31,10 +31,11 @@ class XlingualDictionary(pl.LightningModule):
         return y_hat, I
 
     def training_step(self, batch, batch_idx):
-
-
         x, y =  batch["phrase"], batch["target"]
-        y_hat, I = self.forward(x)
+        outputs = self.encoder(x)
+        sequence_outputs = outputs[0]
+        sequence_embedding = torch.mean(sequence_outputs, 1)
+        y_hat = self.map(sequence_embedding)
         loss = F.mse_loss(y_hat, y)
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -42,9 +43,11 @@ class XlingualDictionary(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        
         x, y =  batch["phrase"], batch["target"]
-        y_hat, I = self.forward(x)
+        outputs = self.encoder(x)
+        sequence_outputs = outputs[0]
+        sequence_embedding = torch.mean(sequence_outputs, 1)
+        y_hat = self.map(sequence_embedding)
         loss = F.mse_loss(y_hat, y)
         self.log('val_loss', loss)
 
@@ -53,20 +56,29 @@ class XlingualDictionary(pl.LightningModule):
         '''
         Configure optimizers for lightning module
         '''
-        return torch.optim.Adam(self.map.parameters(), lr=self.hparams.learning_rate)
 
-    def train_dataloader(self) -> DataLoader:
-        '''
-        Configure train dataloader
-        '''
-        dataset = data_loader.XLingualLoader(dataset_path=dataset_path)
-        data_loader = DataLoader(dataset, batch_size = 32, shuffle=True)
-
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--learning_rate', type=float, default=0.0001)
-        return parser
+        return AdamW(self.parameters(), lr=1e-5)
 
 if __name__=="__main__":
-    pass
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("train_data", type=str)
+    parser.add_argument("val_data", type=str)
+    parser.add_argument("index_dir", type=str)
+    parser.add_argument("encoder_cache_dir", type=str)
+    parser.add_argument("model_path", type=str)
+    parser.add_argument("n_epochs", type=int)
+
+    args = parser.parse_args()
+
+    train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_path)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+
+    val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_path)
+    val_dataloader = DataLoader(val_dataset, batch_size=32, shuffle=True)
+
+    trainer = pl.Trainer(gpus=1, max_epochs=args.n_epocs)
+    encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=args.encoder_cache_dir, return_dict=True)
+    map_network = torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
+    model = XlingualDictionary(encoder, map_network)
+    trainer.fit(model, train_dataloader, val_dataloader)
+    trainer.save_checkpoint(args.model_path)
