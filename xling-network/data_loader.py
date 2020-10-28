@@ -32,7 +32,8 @@ class XLingualTrainDataset(Dataset):
 
         lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
         dataset = read_json_file(dataset_path)
-        self.training_pairs = list()
+        self.phrases = list()
+        self.targets = list()
         self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
         self.max_seq_length = 128
 
@@ -45,16 +46,21 @@ class XLingualTrainDataset(Dataset):
             for d in dataset:
                 if lang_map[d["Target_ID"]] == lang:
                     try:
-                        self.training_pairs.append({
-                                                "phrase": self.tokenizer(d["Source_text"], 
-                                                            padding="max_length", 
-                                                            truncation=True, 
-                                                            max_length=self.max_seq_length,
-                                                            return_tensors="pt"), 
-                                                "target": index.reconstruct(word2idx[d["Target_keyword"]])
-                                                })
+                        # self.training_pairs.append({
+                        #                         "phrase": self.tokenizer(d["Source_text"], 
+                        #                                     padding="max_length", 
+                        #                                     truncation=True, 
+                        #                                     max_length=self.max_seq_length,
+                        #                                     return_tensors="pt"), 
+                        #                         "target": index.reconstruct(word2idx[d["Target_keyword"]])
+                        #                         })
+                        self.phrases.append(d["Source_text"])
+                        self.targets.append(index.reconstruct(word2idx[d["Target_keyword"]]))
                     except KeyError:
                         print(d["Target_keyword"] + " not found")
+        
+        self.phrases = self.tokenizer(self.phrases, padding="max_length", truncation=True,
+                                        max_length=self.max_seq_length)
         
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
         
@@ -67,7 +73,7 @@ class XLingualTrainDataset(Dataset):
             idx - text index 
         '''
         
-        return self.training_pairs[idx]
+        return {"phrases": torch.tensor(self.phrases[idx]), "target": torch.tensor(self.targets[idx])}
 
 
     def preprocess_tokens(self, input_tokens):
