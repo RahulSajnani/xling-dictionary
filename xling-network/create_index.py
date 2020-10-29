@@ -19,7 +19,7 @@ def create_index(words, index_path, vocab_path, cache_dir, batch_size=64):
     model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir, return_dict=True)
     model.to('cuda')
 
-    index = faiss.IndexFlatL2(model.config.hidden_size)
+    index = faiss.IndexFlatIP(model.config.hidden_size)
     i = 0
     while i < len(words):
         batch = words[i:i + batch_size]

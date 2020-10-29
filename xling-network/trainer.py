@@ -23,7 +23,7 @@ class XlingualDictionary(pl.LightningModule):
 
     def forward(self, x, target_lang, index_paths):
         outputs = self.encoder(x)
-        sequence_outputs = outputs[0]
+        sequence_outputs = outputs.last_hidden_state
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
         index = faiss.read_index(index_paths[target_lang])
@@ -31,28 +31,24 @@ class XlingualDictionary(pl.LightningModule):
         return y_hat, I
 
     def training_step(self, batch, batch_idx):
-        print("training batch {}".format(batch_idx))
         x, y =  batch["phrase"], batch["target"]
         outputs = self.encoder(**x)
-        sequence_outputs = outputs[0]
+        sequence_outputs = outputs.last_hidden_state
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
-        loss = F.mse_loss(y_hat, y)
+        loss = F.cosine_embedding_loss(y_hat, y, torch.ones(y.shape[0]))
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=False)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        print()
-        print("validation batch {}".format(batch_idx))
         x, y =  batch["phrase"], batch["target"]
-        print(x['input_ids'].shape)
         outputs = self.encoder(**x)
-        sequence_outputs = outputs[0]
+        sequence_outputs = outputs.last_hidden_state
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
-        loss = F.mse_loss(y_hat, y)
+        loss = F.cosine_embedding_loss(y_hat, y, torch.ones(y.shape[0]))
         self.log('val_loss', loss, on_step=True, on_epoch=True, logger=False)
 
 
