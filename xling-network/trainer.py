@@ -31,24 +31,24 @@ class XlingualDictionary(pl.LightningModule):
         return y_hat, I
 
     def training_step(self, batch, batch_idx):
-        x, y =  batch["phrase"], batch["target"]
+        x, y, label =  batch["phrase"], batch["target"], batch["label"]
         outputs = self.encoder(**x)
         sequence_outputs = outputs.last_hidden_state
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
-        loss = F.cosine_embedding_loss(y_hat, y, torch.ones(y.shape[0]))
+        loss = F.cosine_embedding_loss(y_hat, y, label)
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=False)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, y =  batch["phrase"], batch["target"]
+        x, y, label =  batch["phrase"], batch["target"], batch["label"]
         outputs = self.encoder(**x)
         sequence_outputs = outputs.last_hidden_state
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
-        loss = F.cosine_embedding_loss(y_hat, y, torch.ones(y.shape[0]))
+        loss = F.cosine_embedding_loss(y_hat, y, label)
         self.log('val_loss', loss, on_step=True, on_epoch=True, logger=False)
 
 

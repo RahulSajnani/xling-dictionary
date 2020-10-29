@@ -62,13 +62,16 @@ class XLingualTrainDataset(Dataset):
             idx - text index 
         '''
         tokens = self.tokenizer(self.phrases[idx], padding="max_length", truncation=True, max_length=self.max_seq_length)
+        target = torch.tensor(self.targets[idx])
+        label = torch.ones(target.shape[0], 1)
         return {
                 "phrase": {
                             'input_ids': torch.tensor(tokens['input_ids']).squeeze(),
                             'attention_mask': torch.tensor(tokens['attention_mask']).squeeze(),
                             'token_type_ids': torch.tensor(tokens['token_type_ids']).squeeze()
                           },
-                "target": torch.tensor(self.targets[idx])
+                "target": target,
+                "label": label
                }
 
     def __len__(self):
