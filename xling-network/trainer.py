@@ -31,6 +31,7 @@ class XlingualDictionary(pl.LightningModule):
         return y_hat, I
 
     def training_step(self, batch, batch_idx):
+        print("training batch {}".format(batch_idx))
         x, y =  batch["phrase"], batch["target"]
         outputs = self.encoder(**x)
         sequence_outputs = outputs[0]
@@ -38,18 +39,21 @@ class XlingualDictionary(pl.LightningModule):
         y_hat = self.map(sequence_embedding)
         loss = F.mse_loss(y_hat, y)
 
-        self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True, logger=False)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
+        print()
+        print("validation batch {}".format(batch_idx))
         x, y =  batch["phrase"], batch["target"]
+        print(x['input_ids'].shape)
         outputs = self.encoder(**x)
         sequence_outputs = outputs[0]
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
         loss = F.mse_loss(y_hat, y)
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, on_step=True, on_epoch=True, logger=False)
 
 
     def configure_optimizers(self):
@@ -76,7 +80,7 @@ if __name__=="__main__":
     val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_dir)
     val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10)
 
-    trainer = pl.Trainer(max_epochs=args.n_epochs)
+    trainer = pl.Trainer(gpus=1, max_epochs=args.n_epochs)
     encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=args.encoder_cache_dir, return_dict=True)
     map_network = torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
     model = XlingualDictionary(encoder, map_network)

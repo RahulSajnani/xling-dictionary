@@ -37,7 +37,7 @@ class XLingualTrainDataset(Dataset):
         self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
         self.max_seq_length = 128
 
-        for lang in ['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
+        for lang in ['en']: #['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
             with open(os.path.join(index_path, lang + ".vocab"), 'r') as f:
                 word2idx = {line.strip(): i for i, line in enumerate(f)}
             
@@ -59,8 +59,8 @@ class XLingualTrainDataset(Dataset):
                     except KeyError:
                         print(d["Target_keyword"] + " not found")
         
-        self.phrases = self.tokenizer(self.phrases, padding="max_length", truncation=True,
-                                        max_length=self.max_seq_length)
+        # self.phrases = self.tokenizer(self.phrases, padding="max_length", truncation=True,
+        #                                max_length=self.max_seq_length)
         
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
         
@@ -72,8 +72,15 @@ class XLingualTrainDataset(Dataset):
         Arguments:
             idx - text index 
         '''
-        
-        return {"phrases": torch.tensor(self.phrases[idx]), "target": torch.tensor(self.targets[idx])}
+        tokens = self.tokenizer(self.phrases[idx], padding="max_length", truncation=True, max_length=self.max_seq_length)
+        return {
+                "phrase": {
+                            'input_ids': torch.tensor(tokens['input_ids']).squeeze(),
+                            'attention_mask': torch.tensor(tokens['attention_mask']).squeeze(),
+                            'token_type_ids': torch.tensor(tokens['token_type_ids']).squeeze()
+                          },
+                "target": torch.tensor(self.targets[idx])
+               }
 
 
     def preprocess_tokens(self, input_tokens):
@@ -145,7 +152,7 @@ class XLingualTrainDataset(Dataset):
         Returns length of dataset
         '''
         
-        return len(self.training_pairs)
+        return len(self.phrases)
 
 
     def input_to_tensor(self, data):
@@ -299,9 +306,11 @@ class XLingualLoader(Dataset):
 
    
 if __name__ == "__main__":
-    dataset = XLingualTrainDataset(dataset_path="../data/temp_data.json", index_path="../models/index")
-    data_loader = DataLoader(dataset, batch_size=8, shuffle=True)
+    dataset = XLingualTrainDataset(dataset_path="../data/filtered/validation.json", index_path="../models/index")
+    data_loader = DataLoader(dataset, batch_size=128, shuffle=True)
 
     for batch, data in enumerate(data_loader):
-        print(batch, data)
+        #print(batch)
+        print(data["phrase"]["input_ids"].shape)
+        print(data["target"].shape)
         
