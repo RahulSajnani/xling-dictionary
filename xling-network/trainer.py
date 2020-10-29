@@ -21,13 +21,13 @@ class XlingualDictionary(pl.LightningModule):
         self.encoder = xling_encoder
         self.map = map_network
 
-    def forward(self, x, target_lang, index_paths):
-        outputs = self.encoder(x)
+    def forward(self, x, index_path, k=1):
+        outputs = self.encoder(**x)
         sequence_outputs = outputs.last_hidden_state
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
-        index = faiss.read_index(index_paths[target_lang])
-        D, I = index.search(y_hat, 1)
+        index = faiss.read_index(index_path)
+        D, I = index.search(y_hat, k)
         return y_hat, I
 
     def training_step(self, batch, batch_idx):
