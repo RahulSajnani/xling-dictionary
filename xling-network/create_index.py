@@ -27,13 +27,15 @@ def create_index(words, index_path, vocab_path, cache_dir, batch_size=64):
         tokens.to('cuda')
         outputs = model(**tokens)
         embeddings = torch.mean(outputs.last_hidden_state, 1).detach().cpu().numpy()
+        faiss.normalize_L2(embeddings)
         index.add(embeddings)
         i += batch_size
         print("{} words done".format(index.ntotal))
 
     faiss.write_index(index, index_path)
-    
+
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("word_list", type=argparse.FileType('r'))
     parser.add_argument("lang", type=str)
@@ -41,12 +43,11 @@ if __name__ == "__main__":
     parser.add_argument("encoder_cache_dir", type=str)
 
     args = parser.parse_args()
-
     words = list()
     for line in args.word_list:
         words.append(line.strip())
 
-    create_index(words, 
-                    os.path.join(args.index_dir, args.lang + ".index"), 
+    create_index(words,
+                    os.path.join(args.index_dir, args.lang + ".index"),
                     os.path.join(args.index_dir, args.lang + ".vocab"),
                     args.encoder_cache_dir)
