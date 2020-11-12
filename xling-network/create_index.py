@@ -15,6 +15,7 @@ import fasttext
 import argparse
 
 def create_index(words, index_path, vocab_path, cache_dir, batch_size=64):
+    
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
     model = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=cache_dir, return_dict=True)
     model.to('cuda')
