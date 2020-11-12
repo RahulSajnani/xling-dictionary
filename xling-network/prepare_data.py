@@ -17,20 +17,29 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
         words_dictionary[lang_map[lang]] = []
 
     # separate language target words
+    prev_word = ""
     for l_dict in train_dictionary:
 
+        
         target_id = l_dict["Target_ID"]
         target_word = l_dict["Target_keyword"]
+        
+        if prev_word == target_word:
+            continue
+        prev_word = target_word
         words_dictionary[lang_map[target_id]].append(target_word)
 
     if validation_path is not None:
 
         validation_dictionary = read_json_file(validation_path)
+        prev_word = ""
 
         for l_dict in validation_dictionary:
 
             target_id = l_dict["Target_ID"]
             target_word = l_dict["Target_keyword"]
+            if prev_word == target_word:
+                continue
             words_dictionary[lang_map[target_id]].append(target_word)
 
 
@@ -49,7 +58,6 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
 
         with open(os.path.join(output_directory, lang_map[lang] + ".vocab"), 'w') as fp:
             for listitem in words_dictionary[lang_map[lang]]:
-
                 fp.write('%s\n' % listitem)
 
 if __name__ == "__main__":
