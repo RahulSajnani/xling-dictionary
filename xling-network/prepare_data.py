@@ -60,4 +60,4 @@ if __name__ == "__main__":
 
     #############################################
 
-    create_embeddings(args.input, args.output, args.cache, args,val)
+    create_embeddings(args.input, args.output, args.cache, args.val)
