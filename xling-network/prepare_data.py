@@ -15,19 +15,18 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
 
     for lang in lang_map:
         words_dictionary[lang_map[lang]] = []
-
+    redundant_dict = {}
     # separate language target words
     prev_word = ""
     for l_dict in train_dictionary:
 
-        
+
         target_id = l_dict["Target_ID"]
         target_word = l_dict["Target_keyword"]
-        
-        if prev_word == target_word:
-            continue
-        prev_word = target_word
-        words_dictionary[lang_map[target_id]].append(target_word)
+
+        if redundant_dict.get(target_word) is None:
+            redundant_dict[target_word] = 1
+            words_dictionary[lang_map[target_id]].append(target_word)
 
     if validation_path is not None:
 
@@ -38,9 +37,16 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
 
             target_id = l_dict["Target_ID"]
             target_word = l_dict["Target_keyword"]
-            if prev_word == target_word:
-                continue
-            words_dictionary[lang_map[target_id]].append(target_word)
+
+
+
+            #if prev_word == target_word:
+            #    continue
+            #prev_word = target_word
+
+            if redundant_dict.get(target_word) is None:
+                redundant_dict[target_word] = 1
+                words_dictionary[lang_map[target_id]].append(target_word)
 
 
 
