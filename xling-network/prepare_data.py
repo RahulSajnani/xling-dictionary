@@ -24,6 +24,16 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
         words_dictionary[lang_map[target_id]].append(target_word)
     
     if validation_path is not None:
+    
+        val_dictionary = read_json_file(validation_path)
+        
+        for l_dict in validation_dictionary:
+        
+            target_id = l_dict["Target_ID"]
+            target_word = l_dict["Target_keyword"]
+            words_dictionary[lang_map[target_id]].append(target_word)
+        
+
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
@@ -44,8 +54,10 @@ if __name__ == "__main__":
     parser.add_argument("--input", help = "Training dictionary path", required = True)
     parser.add_argument("--output", help = "Output directory to save embeddings", required = True)
     parser.add_argument("--cache", help = "Bert cache", required = True)
+    parser.add_argument("--val", help = "validation", required = False, default=None)
+    
     args = parser.parse_args()
 
     #############################################
 
-    create_embeddings(args.input, args.output, args.cache)
+    create_embeddings(args.input, args.output, args.cache, args,val)
