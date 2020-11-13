@@ -27,6 +27,8 @@ class XlingualDictionary(pl.LightningModule):
         sequence_embedding = torch.mean(sequence_outputs, 1)
         y_hat = self.map(sequence_embedding)
         index = faiss.read_index(index_path)
+        # embeddings = torch.mean(outputs.last_hidden_state, 1).detach().cpu().numpy()
+        faiss.normalize_L2(y_hat.detach().cpu().numpy())
         D, I = index.search(y_hat, k)
         return y_hat, I
 

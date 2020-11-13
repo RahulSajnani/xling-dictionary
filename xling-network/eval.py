@@ -13,6 +13,7 @@ from transformers import AutoTokenizer
 from helper_functions import read_json_file
 
 def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
+    
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
 
@@ -50,6 +51,8 @@ def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
     return correct / total
 
 if __name__ == "__main__":
+
+
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("test_data", type=str)
     parser.add_argument("index_dir", type=str)
