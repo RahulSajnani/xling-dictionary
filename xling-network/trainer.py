@@ -14,10 +14,10 @@ class XlingualDictionary(pl.LightningModule):
     '''
 
     def __init__(self, xling_encoder, map_network):
-        
+
         super().__init__()
-        
-        self.save_hyperparameters()    
+
+        self.save_hyperparameters()
         self.encoder = xling_encoder
         self.map = map_network
 
@@ -60,6 +60,7 @@ class XlingualDictionary(pl.LightningModule):
         return AdamW(self.parameters(), lr=1e-5)
 
 if __name__=="__main__":
+
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("train_data", type=str)
     parser.add_argument("val_data", type=str)
@@ -69,16 +70,16 @@ if __name__=="__main__":
     parser.add_argument("n_epochs", type=int)
 
     args = parser.parse_args()
-
     train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_dir)
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=10)
+    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=10)
 
     val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_dir)
     val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10)
 
-    trainer = pl.Trainer(gpus=1, max_epochs=args.n_epochs)
+    trainer = pl.Trainer(gpus=-1, max_epochs=args.n_epochs, distributed_backend='dp', prepare_data_per_node=False, num_nodes = 1, num_sanity_val_steps=0)
     encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=args.encoder_cache_dir, return_dict=True)
     map_network = torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
+
     model = XlingualDictionary(encoder, map_network)
     trainer.fit(model, train_dataloader, val_dataloader)
     trainer.save_checkpoint(args.model_path)
