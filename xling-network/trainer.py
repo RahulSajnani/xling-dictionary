@@ -28,7 +28,8 @@ class XlingualDictionary(pl.LightningModule):
         y_hat = self.map(sequence_embedding)
         index = faiss.read_index(index_path)
         # embeddings = torch.mean(outputs.last_hidden_state, 1).detach().cpu().numpy()
-        faiss.normalize_L2(y_hat.detach().cpu().numpy())
+        y_hat = y_hat.detach().cpu().numpy()
+        faiss.normalize_L2(y_hat)
         D, I = index.search(y_hat, k)
         return y_hat, I
 
@@ -74,7 +75,7 @@ if __name__=="__main__":
 
     args = parser.parse_args()
     train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_dir)
-    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=10, drop_last = True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=10, drop_last = True)
 
     val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_dir)
     val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last = True)

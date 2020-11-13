@@ -13,11 +13,11 @@ from transformers import AutoTokenizer
 from helper_functions import read_json_file
 
 def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
-    
+
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
 
-    lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+    lang_map = {"EN": "en"} #{'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
 
     data_by_lang = defaultdict(list)
     for d in test_data:
@@ -25,29 +25,32 @@ def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
 
     correct = 0
     total = 0
-    
+
     for lang in lang_map.keys():
         with open(os.path.join(index_dir, lang_map[lang] + ".vocab"), 'r') as f:
             vocab = [line.strip() for line in f]
 
         phrases = [d["Source_text"] for d in data_by_lang[lang]]
         b = 0
+        #print(phrases)
         with torch.no_grad():
             while b < len(phrases):
                 tokens = tokenizer(phrases[b:b + batch_size], padding="max_length", truncation=True, max_length=128, return_tensors="pt")
                 tokens.to('cuda')
                 _, I = model(tokens, os.path.join(index_dir, lang_map[lang] + ".index"), k)
                 words = [[vocab[i] for i in row] for row in I]
+                #print(words)
                 for i, d in enumerate(data_by_lang[lang]):
-                    if d["Target_keyword"] in words[i]:
-                        correct += 1
+                    for word_l in words:
+                        if d["Target_keyword"] in word_l:
+                            correct += 1
                     total += 1
                 b += batch_size
                 if b % (10 * batch_size) == 0:
-                    print("{} samples processed".format(b))
-        
+                    print("{} samples processed {}".format(b, correct/total))
+
         print("{} done!".format(lang))
-    
+
     return correct / total
 
 if __name__ == "__main__":
