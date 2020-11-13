@@ -16,7 +16,7 @@ from helper_functions import *
 from transformers import AutoTokenizer
 import faiss
 
-class XLingualTrainDataset(Dataset):
+class XLingualDataset(Dataset):
     '''
     Reverse dictionary data loader for training
     '''
@@ -30,29 +30,26 @@ class XLingualTrainDataset(Dataset):
             index_paths - dict that maps language tag to faiss index path
         '''
 
-        lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
-        dataset = read_json_file(dataset_path)
-        self.phrases = list()
+        self.lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+        self.dataset = read_json_file(dataset_path)
         self.targets = list()
         self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
         self.max_seq_length = 128
 
-        for lang in ['en']: #['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
+        for lang in lang_map.keys():
             with open(os.path.join(index_path, lang + ".vocab"), 'r') as f:
                 word2idx = {line.strip(): i for i, line in enumerate(f)}
 
             index = faiss.read_index(os.path.join(index_path, lang + ".index"))
 
-            for d in dataset:
+            for d in self.dataset:
                 if lang_map[d["Target_ID"]] == lang:
                     try:
                         self.targets.append(index.reconstruct(word2idx[d["Target_keyword"]]))
-                        self.phrases.append(d["Source_text"])
                     except KeyError:
                         print(d["Target_keyword"] + " not found")
 
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
-
 
     def __getitem__(self, idx):
         '''
@@ -61,7 +58,7 @@ class XLingualTrainDataset(Dataset):
         Arguments:
             idx - text index
         '''
-        tokens = self.tokenizer(self.phrases[idx], padding="max_length", truncation=True, max_length=self.max_seq_length)
+        tokens = self.tokenizer(self.dataset[idx]["Source_text"], padding="max_length", truncation=True, max_length=self.max_seq_length)
         target = torch.tensor(self.targets[idx])
         label = torch.ones(target.shape[0], 1)
         return {
@@ -71,6 +68,9 @@ class XLingualTrainDataset(Dataset):
                             'token_type_ids': torch.tensor(tokens['token_type_ids']).squeeze()
                           },
                 "target": target,
+                "source_lang": self.lang_map[self.dataset[idx]["Source_ID"]],
+                "target_lang": self.lang_map[self.dataset[idx]["Target_ID"]],
+                "target_word": self.dataset[idx]["Target_keyword"],
                 "label": label
                }
 
@@ -82,6 +82,20 @@ class XLingualTrainDataset(Dataset):
 
         return len(self.phrases)
 
+def get_eval_collate(index_path, k):
+    def collate(batch):
+        return {
+            "phrase": batch["phrase"],
+            "target": batch["target"],
+            "source_lang": batch["source_lang"],
+            "target_lang": batch["target_lang"],
+            "target_word": batch["target_word"],
+            "label": batch["label"],
+            "index_path": index_path,
+            "k": k
+        }
+    
+    return collate
 
 class XLingualLoader(Dataset):
     '''

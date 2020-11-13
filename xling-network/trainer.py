@@ -7,80 +7,33 @@ from torch.utils.data import DataLoader, random_split
 import data_loader
 import faiss
 from transformers import AdamW, AutoModel
-
-class XlingualDictionary(pl.LightningModule):
-    '''
-    Cross lingual dictionary model
-    '''
-
-    def __init__(self, xling_encoder, map_network):
-
-        super().__init__()
-
-        self.save_hyperparameters()
-        self.encoder = xling_encoder
-        self.map = map_network
-
-    def forward(self, x, index_path, k=1):
-        outputs = self.encoder(**x)
-        sequence_outputs = outputs.last_hidden_state
-        sequence_embedding = torch.mean(sequence_outputs, 1)
-        y_hat = self.map(sequence_embedding)
-        index = faiss.read_index(index_path)
-        D, I = index.search(y_hat, k)
-        return y_hat, I
-
-    def training_step(self, batch, batch_idx):
-
-        x, y, label =  batch["phrase"], batch["target"], batch["label"]
-        outputs = self.encoder(**x)
-        sequence_outputs = outputs.last_hidden_state
-        sequence_embedding = torch.mean(sequence_outputs, 1)
-        y_hat = self.map(sequence_embedding)
-        loss = F.cosine_embedding_loss(y_hat, y, label)
-
-        self.log('train_loss', loss)
-
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        x, y, label =  batch["phrase"], batch["target"], batch["label"]
-        outputs = self.encoder(**x)
-        sequence_outputs = outputs.last_hidden_state
-        sequence_embedding = torch.mean(sequence_outputs, 1)
-        y_hat = self.map(sequence_embedding)
-        loss = F.cosine_embedding_loss(y_hat, y, label)
-        self.log('val_loss', loss)
-        return loss
-
-    def configure_optimizers(self):
-        '''
-        Configure optimizers for lightning module
-        '''
-
-        return AdamW(self.parameters(), lr=1e-5)
+from model import XlingualDictionaryBERT
 
 if __name__=="__main__":
-
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("train_data", type=str)
     parser.add_argument("val_data", type=str)
+    parser.add_argument("test_data", type=str)
     parser.add_argument("index_dir", type=str)
     parser.add_argument("encoder_cache_dir", type=str)
     parser.add_argument("model_path", type=str)
     parser.add_argument("n_epochs", type=int)
+    parser.add_argument("k", type=int)
 
     args = parser.parse_args()
-    train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_dir)
-    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=10, drop_last = True)
+    train_dataset = data_loader.XLingualDataset(args.train_data, args.index_dir)
+    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=10, drop_last=True)
 
-    val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_dir)
-    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last = True)
+    val_dataset = data_loader.XLingualDataset(args.val_data, args.index_dir)
+    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last=True, collate_fn=data_loader.get_eval_collate(args.index_path, args.k))
+
+    test_dataset = data_loader.XLingualDataset(args.test_data, args.index_dir)
+    test_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last=True, collate_fn=data_loader.get_eval_collate(args.index_path, args.k))
 
     trainer = pl.Trainer(gpus=-1, max_epochs=args.n_epochs, distributed_backend='dp', prepare_data_per_node=False, num_nodes = 1, num_sanity_val_steps=0)
-    encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", cache_dir=args.encoder_cache_dir, return_dict=True)
-    map_network = torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
 
-    model = XlingualDictionary(encoder, map_network)
+    model = XlingualDictionaryBERT()
     trainer.fit(model, train_dataloader, val_dataloader)
     trainer.save_checkpoint(args.model_path)
+
+    # trainer.test(test_dataloaders=test_dataloader)
