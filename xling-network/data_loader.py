@@ -37,7 +37,7 @@ class XLingualTrainDataset(Dataset):
         self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
         self.max_seq_length = 128
 
-        for lang in ['en']: #['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
+        for lang in ['en']:# ['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
             with open(os.path.join(index_path, lang + ".vocab"), 'r') as f:
                 word2idx = {line.strip(): i for i, line in enumerate(f)}
 

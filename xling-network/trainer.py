@@ -41,7 +41,7 @@ class XlingualDictionary(pl.LightningModule):
 
         self.log('train_loss', loss)
 
-        return loss
+        return {'loss': loss, "emb_loss": loss}
 
     def validation_step(self, batch, batch_idx):
         x, y, label =  batch["phrase"], batch["target"], batch["label"]
