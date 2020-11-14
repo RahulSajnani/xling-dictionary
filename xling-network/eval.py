@@ -60,10 +60,10 @@ if __name__ == "__main__":
     parser.add_argument("test_data", type=str)
     parser.add_argument("index_dir", type=str)
     parser.add_argument("model_path", type=str)
-    parser.add_argument("k", type=int)
+    parser.add_argument("k", type=int, default=10)
 
     args = parser.parse_args()
 
     model = XlingualDictionary.load_from_checkpoint(args.model_path)
     model.to('cuda')
-    print(get_accuracy(read_json_file(args.test_data), model, args.index_dir))
+    print(get_accuracy(read_json_file(args.test_data), model, args.index_dir, args.k))

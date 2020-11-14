@@ -2,7 +2,7 @@ from helper_functions import *
 from create_index import *
 
 
-def create_embeddings(dictionary_path, output_directory, encoder_cache,  validation_path = None):
+def create_embeddings(dictionary_path, output_directory, encoder_cache,  validation_path = None, test_path = None):
     '''
     Creates embeddings for every language
     '''
@@ -30,6 +30,7 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
 
     if validation_path is not None:
 
+        print(validation_path)
         validation_dictionary = read_json_file(validation_path)
         prev_word = ""
 
@@ -43,6 +44,21 @@ def create_embeddings(dictionary_path, output_directory, encoder_cache,  validat
             #if prev_word == target_word:
             #    continue
             #prev_word = target_word
+
+            if redundant_dict.get(target_word) is None:
+                redundant_dict[target_word] = 1
+                words_dictionary[lang_map[target_id]].append(target_word)
+
+    if test_path is not None:
+
+        print(test_path)
+        validation_dictionary = read_json_file(test_path)
+        prev_word = ""
+
+        for l_dict in validation_dictionary:
+
+            target_id = l_dict["Target_ID"]
+            target_word = l_dict["Target_keyword"]
 
             if redundant_dict.get(target_word) is None:
                 redundant_dict[target_word] = 1
@@ -75,9 +91,10 @@ if __name__ == "__main__":
     parser.add_argument("--output", help = "Output directory to save embeddings", required = True)
     parser.add_argument("--cache", help = "Bert cache", required = True)
     parser.add_argument("--val", help = "validation", required = False, default=None)
+    parser.add_argument("--test", help = "path to test json", required = False, default=None)
 
     args = parser.parse_args()
 
     #############################################
 
-    create_embeddings(args.input, args.output, args.cache, args.val)
+    create_embeddings(args.input, args.output, args.cache, args.val, args.test)
