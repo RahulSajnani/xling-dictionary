@@ -20,7 +20,7 @@ class XlingualDictionaryBERT(pl.LightningModule):
     def __init__(self):
         super().__init__()
         
-        self.save_hyperparameters()    
+        # self.save_hyperparameters()    
         self.encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", return_dict=True)
 
     def forward(self, x):
@@ -36,8 +36,8 @@ class XlingualDictionaryBERT(pl.LightningModule):
         y_hat = torch.mean(sequence_outputs, 1)
         loss = F.cosine_embedding_loss(y_hat, y, label)
 
-        self.log('train_loss', loss, on_step=True, on_epoch=True, logger=False)
-
+        # self.log('train_loss', loss, on_step=True, on_epoch=True, logger=False)
+        print("Epoch {} Batch {}: Loss = {}".format(self.trainer.current_epoch, batch_idx, loss))
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -52,7 +52,7 @@ class XlingualDictionaryBERT(pl.LightningModule):
         langs = set(target_lang)
         y_hat = self(x)
         embeddings = y_hat.detach().cpu().numpy().astype(np.float32)
-        faiss.normalize_L2(y_hat)
+        faiss.normalize_L2(embeddings)
         langwise_idx = {lang: [i for i, l in enumerate(target_lang) if l == lang] for lang in langs}
         predicted_words = [None for i in range(len(target_words))]
         for lang in langs:
@@ -67,7 +67,8 @@ class XlingualDictionaryBERT(pl.LightningModule):
         acc = sum([1 if t in predicted_words[i] else 0 for i, t in enumerate(target_words)]) / len(target_words)
 
         loss = F.cosine_embedding_loss(y_hat, y, label)
-        self.log_dict({'val_loss': loss, 'val_acc': acc}, on_step=True, on_epoch=True)
+        # self.log_dict({'val_loss': loss, 'val_acc': acc}, on_step=True, on_epoch=True, logger=False)
+        print("Epoch {} Batch {}: Loss = {}; Accuracy = {}".format(self.trainer.current_epoch, batch_idx, loss, acc))
 
     def test_step(self, batch, batch_idx):
         x = batch["phrase"]
@@ -81,7 +82,7 @@ class XlingualDictionaryBERT(pl.LightningModule):
         langs = set(target_lang)
         y_hat = self(x)
         embeddings = y_hat.detach().cpu().numpy().astype(np.float32)
-        faiss.normalize_L2(y_hat)
+        faiss.normalize_L2(embeddings)
         langwise_idx = {lang: [i for i, l in enumerate(target_lang) if l == lang] for lang in langs}
         predicted_words = [None for i in range(len(target_words))]
         for lang in langs:
@@ -96,11 +97,12 @@ class XlingualDictionaryBERT(pl.LightningModule):
         acc = sum([1 if t in predicted_words[i] else 0 for i, t in enumerate(target_words)]) / len(target_words)
 
         loss = F.cosine_embedding_loss(y_hat, y, label)
-        self.log_dict({'test_loss': loss, 'test_acc': acc}, on_step=True, on_epoch=True)
+        #self.log_dict({'test_loss': loss, 'test_acc': acc}, on_step=True, on_epoch=True, prog_bar=False)
+        print("Epoch {} Batch {}: Loss = {}; Accuracy = {}".format(self.trainer.current_epoch, batch_idx, loss, acc))
 
 
     def configure_optimizers(self):
         '''
         Configure optimizers for lightning module
         '''
-        return AdamW(self.parameters(), lr=1e-5)
+        return AdamW(self.parameters(), lr=2e-5)

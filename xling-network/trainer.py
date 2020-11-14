@@ -22,15 +22,15 @@ if __name__=="__main__":
 
     args = parser.parse_args()
     train_dataset = data_loader.XLingualDataset(args.train_data, args.index_dir)
-    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=10, drop_last=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=10, drop_last=True, collate_fn=data_loader.get_train_collate())
 
     val_dataset = data_loader.XLingualDataset(args.val_data, args.index_dir)
-    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last=True, collate_fn=data_loader.get_eval_collate(args.index_path, args.k))
+    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last=True, collate_fn=data_loader.get_eval_collate(args.index_dir, args.k))
 
     test_dataset = data_loader.XLingualDataset(args.test_data, args.index_dir)
-    test_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last=True, collate_fn=data_loader.get_eval_collate(args.index_path, args.k))
+    test_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last=True, collate_fn=data_loader.get_eval_collate(args.index_dir, args.k))
 
-    trainer = pl.Trainer(gpus=-1, max_epochs=args.n_epochs, distributed_backend='dp', prepare_data_per_node=False, num_nodes = 1, num_sanity_val_steps=0)
+    trainer = pl.Trainer(gpus=-1, max_epochs=args.n_epochs, distributed_backend='dp', prepare_data_per_node=False, num_nodes=1) #, progress_bar_refresh_rate=0)
 
     model = XlingualDictionaryBERT()
     trainer.fit(model, train_dataloader, val_dataloader)

@@ -31,19 +31,20 @@ class XLingualDataset(Dataset):
         '''
 
         self.lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+        self.lang_map = {lang: lang for lang in self.lang_map}
         self.dataset = read_json_file(dataset_path)
         self.targets = list()
         self.tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
         self.max_seq_length = 128
 
-        for lang in lang_map.keys():
+        for lang in self.lang_map.keys():
             with open(os.path.join(index_path, lang + ".vocab"), 'r') as f:
                 word2idx = {line.strip(): i for i, line in enumerate(f)}
 
             index = faiss.read_index(os.path.join(index_path, lang + ".index"))
 
             for d in self.dataset:
-                if lang_map[d["Target_ID"]] == lang:
+                if self.lang_map[d["Target_ID"]] == lang:
                     try:
                         self.targets.append(index.reconstruct(word2idx[d["Target_keyword"]]))
                     except KeyError:
@@ -58,15 +59,11 @@ class XLingualDataset(Dataset):
         Arguments:
             idx - text index
         '''
-        tokens = self.tokenizer(self.dataset[idx]["Source_text"], padding="max_length", truncation=True, max_length=self.max_seq_length)
+        tokens = self.tokenizer(self.dataset[idx]["Source_text"], padding="max_length", truncation=True, max_length=self.max_seq_length, return_tensors="pt")
         target = torch.tensor(self.targets[idx])
-        label = torch.ones(target.shape[0], 1)
+        label = torch.ones(1)
         return {
-                "phrase": {
-                            'input_ids': torch.tensor(tokens['input_ids']).squeeze(),
-                            'attention_mask': torch.tensor(tokens['attention_mask']).squeeze(),
-                            'token_type_ids': torch.tensor(tokens['token_type_ids']).squeeze()
-                          },
+                "phrase": tokens,
                 "target": target,
                 "source_lang": self.lang_map[self.dataset[idx]["Source_ID"]],
                 "target_lang": self.lang_map[self.dataset[idx]["Target_ID"]],
@@ -80,17 +77,38 @@ class XLingualDataset(Dataset):
         Returns length of dataset
         '''
 
-        return len(self.phrases)
+        return len(self.dataset)
+
+def get_train_collate():
+    def collate(batch):
+        return {
+            "phrase": {
+                          'input_ids': torch.cat([b["phrase"]['input_ids'] for b in batch]),
+                          'attention_mask': torch.cat([b["phrase"]['attention_mask'] for b in batch]),
+                          'token_type_ids': torch.cat([b["phrase"]['token_type_ids'] for b in batch]),
+                      }, 
+            "target": torch.cat([b["target"].unsqueeze(0) for b in batch]),
+            "source_lang": [b["source_lang"] for b in batch],
+            "target_lang": [b["target_lang"] for b in batch],
+            "target_words": [b["target_word"] for b in batch],
+            "label": torch.cat([b["label"].unsqueeze(0) for b in batch]),
+        }
+    
+    return collate
 
 def get_eval_collate(index_path, k):
     def collate(batch):
         return {
-            "phrase": batch["phrase"],
-            "target": batch["target"],
-            "source_lang": batch["source_lang"],
-            "target_lang": batch["target_lang"],
-            "target_word": batch["target_word"],
-            "label": batch["label"],
+            "phrase": {
+                          'input_ids': torch.cat([b["phrase"]['input_ids'] for b in batch]),
+                          'attention_mask': torch.cat([b["phrase"]['attention_mask'] for b in batch]),
+                          'token_type_ids': torch.cat([b["phrase"]['token_type_ids'] for b in batch]),
+                      }, 
+            "target": torch.cat([b["target"].unsqueeze(0) for b in batch]),
+            "source_lang": [b["source_lang"] for b in batch],
+            "target_lang": [b["target_lang"] for b in batch],
+            "target_words": [b["target_word"] for b in batch],
+            "label": torch.cat([b["label"].unsqueeze(0) for b in batch]),
             "index_path": index_path,
             "k": k
         }
