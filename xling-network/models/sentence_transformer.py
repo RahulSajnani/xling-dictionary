@@ -57,13 +57,13 @@ if __name__=="__main__":
 
     with open(args.train_data, 'r') as f:
         data = json.load(f)
-    train_examples = [InputExample(texts=[d["Source_text"], d["Target_keyword"]]) for d in data]
+    train_examples = [InputExample(texts=[d["Source_text"], d["Target_keyword"]], label=1.0) for d in data]
 
     train_dataset = SentencesDataset(train_examples, model)
     train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=16)
-    train_loss = losses.MSELoss(model)
+    train_loss = losses.CosineSimilarityLoss(model)
 
-    model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=3, warmup_steps=100)
+    model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=3, warmup_steps=100, optimizer_params={'correct_bias': False, 'eps': 1e-06, 'lr': 6e-05})
     model.save(args.model_path)
 
     queries, corpus, relevant_docs = get_IR_data(args.val_data, args.index_dir)

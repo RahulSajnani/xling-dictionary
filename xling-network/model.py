@@ -69,6 +69,7 @@ class XlingualDictionaryBERT(pl.LightningModule):
         loss = F.cosine_embedding_loss(y_hat, y, label)
         # self.log_dict({'val_loss': loss, 'val_acc': acc}, on_step=True, on_epoch=True, logger=False)
         print("Epoch {} Batch {}: Loss = {}; Accuracy = {}".format(self.trainer.current_epoch, batch_idx, loss, acc))
+        return {'loss': loss, 'acc': acc}
 
     def test_step(self, batch, batch_idx):
         x = batch["phrase"]
@@ -99,6 +100,7 @@ class XlingualDictionaryBERT(pl.LightningModule):
         loss = F.cosine_embedding_loss(y_hat, y, label)
         #self.log_dict({'test_loss': loss, 'test_acc': acc}, on_step=True, on_epoch=True, prog_bar=False)
         print("Epoch {} Batch {}: Loss = {}; Accuracy = {}".format(self.trainer.current_epoch, batch_idx, loss, acc))
+        return {'loss': loss, 'acc': acc}
 
 
     def configure_optimizers(self):
