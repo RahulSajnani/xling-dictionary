@@ -1,5 +1,6 @@
 from sentence_transformers import SentenceTransformer, SentencesDataset, InputExample, losses, models, evaluation
 from torch.utils.data import DataLoader
+import torch.nn as nn
 import json
 import argparse
 from collections import defaultdict
@@ -47,34 +48,41 @@ if __name__=="__main__":
     parser.add_argument("results_dir", type=str)
     parser.add_argument("model_path", type=str)
     parser.add_argument("n_epochs", type=int)
-    parser.add_argument("k", type=int)
+    parser.add_argument("--k", nargs='+', type=int, default=[10, 100])
+    parser.add_argument("--langs", nargs='+', type=str, default=['HI', 'BE', 'GU', 'OD', 'PU', 'EN', 'MA'])
 
     args = parser.parse_args()
 
     word_embedding_model = models.Transformer('ai4bharat/indic-bert', max_seq_length=256)
     pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension())
+    linear_map = nn.Linear(word_embedding_model.get_word_embedding_dimension(), word_embedding_model.get_word_embedding_dimension())
+    activation = nn.Tanh()
     model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
 
     with open(args.train_data, 'r') as f:
         data = json.load(f)
-    train_examples = [InputExample(texts=[d["Source_text"], d["Target_keyword"]], label=1.0) for d in data]
+    train_examples = [InputExample(texts=[d["Source_text"], d["Target_keyword"]], label=1.0) for d in data
+                        if d["Target_ID"] in args.langs]
 
     train_dataset = SentencesDataset(train_examples, model)
-    train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=16)
+    train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=64)
     train_loss = losses.CosineSimilarityLoss(model)
 
-    model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=3, warmup_steps=100, optimizer_params={'correct_bias': False, 'eps': 1e-06, 'lr': 6e-05})
+    model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=args.n_epochs, warmup_steps=100)
     model.save(args.model_path)
 
-    queries, corpus, relevant_docs = get_IR_data(args.val_data, args.index_dir)
+    queries, corpus, relevant_docs = get_IR_data(args.test_data, args.index_dir)
 
     for lang in queries:
+        if not lang in args.langs:
+            continue
+
         evaluator = evaluation.InformationRetrievalEvaluator(queries[lang], 
                                                                 corpus[lang], 
                                                                 relevant_docs[lang],
-                                                                mrr_at_k=[args.k],
-                                                                ndcg_at_k=[args.k],
-                                                                accuracy_at_k=[args.k],
-                                                                precision_recall_at_k=[args.k],
-                                                                map_at_k=[args.k])
+                                                                mrr_at_k=args.k,
+                                                                ndcg_at_k=args.k,
+                                                                accuracy_at_k=args.k,
+                                                                precision_recall_at_k=args.k,
+                                                                map_at_k=args.k)
         evaluator(model, output_path=os.path.join(args.results_dir, "{}.results".format(lang)))
