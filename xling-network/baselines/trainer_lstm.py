@@ -1,14 +1,16 @@
 import argparse
 
 import torch
+import data_loader
 import pytorch_lightning as pl
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, random_split
-import data_loader
 import faiss
 from transformers import AdamW, AutoModel
 import torch.nn as nn
-from ..models.lstm import LSTM_model
+import sys
+sys.path.append("../")
+from models.lstm import LSTM_model
 
 class XlingualDictionary_lstm(pl.LightningModule):
     '''
@@ -74,7 +76,7 @@ class XlingualDictionary_lstm(pl.LightningModule):
 
         return AdamW(self.parameters(), lr=1e-5)
     
-    def 
+    # def 
 
 if __name__=="__main__":
 
@@ -85,15 +87,29 @@ if __name__=="__main__":
     parser.add_argument("n_epochs", type=int)
 
     args = parser.parse_args()
-    train_dataset = data_loader.XLingualTrainDataset(args.train_data, args.index_dir)
+    train_dataset = data_loader.XLingualTrainDataset_baseline_lstm(args.train_data, args.index_dir)
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=10, drop_last = True)
 
-    val_dataset = data_loader.XLingualTrainDataset(args.val_data, args.index_dir)
+    val_dataset = data_loader.XLingualTrainDataset_baseline_lstm(args.val_data, args.index_dir)
     val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last = True)
 
     trainer = pl.Trainer(gpus=-1, max_epochs=args.n_epochs, distributed_backend='dp', prepare_data_per_node=False, num_nodes = 1, num_sanity_val_steps=0)
-    encoder = AutoModel.from_pretrained("ai4bharat/indic-bert", output_hidden_states = True, cache_dir=args.encoder_cache_dir, return_dict=True)
+    
+    
+    
+    EMBEDDING_DIM = train_dataset.embeddings.vocab.vectors[0].shape
+    PAD_IDX = train_dataset.embeddings.vocab.stoi[train_dataset.vocabulary.pad_token]
+    UNK_IDX = train_dataset.embeddings.vocab.stoi[train_dataset.vocabulary.unk_token]
+
+
+    encoder = LSTM_model(vocab_size = len(train_dataset.embeddings.vocab.stoi), input_dim = EMBEDDING_DIM, hidden_size = (EMBEDDING_DIM), num_layers = 5, padding_idx = PAD_IDX)
+
+    encoder.embedding.weight.data.copy_(train_dataset.embeddings.vocab.vectors)
     map_network = torch.nn.Identity() #torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
 
+
+    encoder.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
+    encoder.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
+    
     model = XlingualDictionary_lstm(encoder, map_network)
     trainer.fit(model, train_dataloader, val_dataloader)

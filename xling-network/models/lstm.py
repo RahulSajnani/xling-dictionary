@@ -10,18 +10,16 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class LSTM_model(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers):
-        super(RNN, self).__init__()
+    def __init__(self, vocab_size, input_dim, hidden_size, num_layers, padding_idx):
+        super(LSTM_model, self).__init__()
+
+        self.embedding = nn.Embedding(vocab_size, input_dim, padding_idx=padding_idx)
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        # self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
-        # -> x needs to be: (batch_size, seq, input_size)
-        
-        # or:
-        #self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(input_dim, hidden_size, num_layers, batch_first=True)
         self.dropout_layer = nn.Dropout(p=0.2)
-		# self.fc = nn.Linear(hidden_size, num_classes)
+        self.fc = nn.Linear(hidden_size, input_dim)
+        self.activation = nn.Tanh()
         
     def forward(self, x):
         # Set initial hidden states (and cell states for LSTM)
@@ -37,9 +35,9 @@ class LSTM_model(nn.Module):
         # out: (n, 28, 128)
         
         # Decode the hidden state of the last time step
-        out = out[:, -1, :]
-        # out: (n, 128)
-         
+        out = self.activation(out[:, -1, :])
+        # out: (n, 300)
+        #   
         return out
 
 class LSTMClassifier(nn.Module):
