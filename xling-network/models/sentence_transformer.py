@@ -21,7 +21,7 @@ def get_IR_data(data_path, index_dir):
         i = 0
         with open(os.path.join(index_dir, "{}.vocab".format(lang)), 'r') as f:
             for line in f:
-                corpus[str(i)] = line.strip()
+                lang_corpus[str(i)] = line.strip()
                 lang_reverse_corpus[line.strip()] = str(i)
                 i += 1
         
