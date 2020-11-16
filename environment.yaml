@@ -66,15 +66,21 @@ dependencies:
     - grpcio==1.33.2
     - idna==2.10
     - importlib-metadata==2.0.0
+    - indic-nlp-library==0.71
+    - indicnlp==0.0.1
     - joblib==0.17.0
     - markdown==3.3.3
+    - morfessor==2.0.6
+    - nltk==3.5
     - oauthlib==3.1.0
     - packaging==20.4
+    - pandas==1.1.4
     - protobuf==3.13.0
     - pyasn1==0.4.8
     - pyasn1-modules==0.2.8
     - pybind11==2.6.1
     - pytorch-lightning==1.0.6
+    - pytz==2020.4
     - pyyaml==5.3.1
     - regex==2020.11.13
     - requests==2.25.0
@@ -86,6 +92,7 @@ dependencies:
     - tensorboard-plugin-wit==1.7.0
     - tokenizers==0.9.3
     - torch==1.7.0
+    - torchtext==0.8.0
     - torchvision==0.8.1
     - tqdm==4.51.0
     - transformers==3.5.0

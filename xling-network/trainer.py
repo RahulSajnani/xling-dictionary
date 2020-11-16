@@ -98,4 +98,4 @@ if __name__=="__main__":
 
     model = XlingualDictionary(encoder, map_network)
     trainer.fit(model, train_dataloader, val_dataloader)
-    trainer.save_checkpoint(args.model_path)
+    #trainer.save_checkpoint(args.model_path)

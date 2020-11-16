@@ -17,8 +17,9 @@ def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
     model.eval()
     tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
 
-    lang_map = {"EN": "en"} #{'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+    #lang_map = {"EN": "en"}
 
+    lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
     data_by_lang = defaultdict(list)
     for d in test_data:
         data_by_lang[d["Target_ID"]].append(d)

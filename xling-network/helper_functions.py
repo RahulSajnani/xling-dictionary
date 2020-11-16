@@ -1,7 +1,6 @@
 import json
 import argparse
 
-
 def read_json_file(file_path):
 
     '''
@@ -17,13 +16,13 @@ def read_json_file(file_path):
     with open(file_path) as fp:
 
         input_dictionary = json.load(fp)
-    
+
 
     return input_dictionary
 
 if __name__ == "__main__":
 
-    ############################# Argument Parser 
+    ############################# Argument Parser
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", help = "Training dictionary path", required = True)
@@ -42,10 +41,10 @@ if __name__ == "__main__":
 
     length = 0
     for i in train_dictionary:
-        
+
         phrase = i["Source_text"]
         p_len = len(phrase.split())
-        
+
         if p_len > length:
             length = p_len
         language_idx = i["Source_ID"]
@@ -53,11 +52,11 @@ if __name__ == "__main__":
         if language_idx not in language_dictionary:
             language_dictionary[language_idx] = ids
             ids = ids + 1
-        
+
         if language_idx_t not in language_dictionary:
             language_dictionary[language_idx_t] = ids
             ids = ids + 1
-        
+
         # print(i)
     print(language_dictionary)
     print(length)
