@@ -9,7 +9,7 @@ import torch.optim as optim
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
-class LSTM(nn.Module):
+class LSTM_model(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers):
         super(RNN, self).__init__()
         self.num_layers = num_layers

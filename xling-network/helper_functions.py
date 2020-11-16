@@ -31,13 +31,23 @@ if __name__ == "__main__":
 
     #############################################
 
+    """
+    MAX phrase length = 64
+    """
 
     train_dictionary = read_json_file(args.path)
 
     language_dictionary = {}
     ids = 0
+
+    length = 0
     for i in train_dictionary:
         
+        phrase = i["Source_text"]
+        p_len = len(phrase.split())
+        
+        if p_len > length:
+            length = p_len
         language_idx = i["Source_ID"]
         language_idx_t = i["Target_ID"]
         if language_idx not in language_dictionary:
@@ -50,4 +60,4 @@ if __name__ == "__main__":
         
         # print(i)
     print(language_dictionary)
-        
+    print(length)
