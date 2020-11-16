@@ -1,6 +1,7 @@
 import json
 from indicnlp import normalize
 import torch
+from torch import t
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -21,7 +22,7 @@ from indicnlp.tokenize import indic_tokenize
 import re
 from nltk.stem import WordNetLemmatizer
 import torchtext.vocab as vocab
-
+import torchtext
 
 
 
@@ -55,6 +56,7 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         self.target_lang = list()
         self.max_seq_length = 128
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
+        
 
     def get_indic_normalizers(self):
         
@@ -71,16 +73,24 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
     def get_dataset(self):
 
         self.embeddings = vocab.Vectors(name = self.index_path, cache = self.cache_path)
+        self.vocabulary = torchtext.data.Field()
+        
+        # Adding pad and unk token
+        self.embeddings.stoi[self.vocabulary.pad_token] = len(self.embeddings.stoi)
+        self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.pad_token]] = torch.ones(300)
+        self.embeddings.stoi[self.vocabulary.unk_token] = len(self.embeddings.stoi)
+        self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.unk_token]] = torch.random.normal(300)
 
         for lang in ['en']:# ['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
             for d in dataset:
                 if self.lang_map[d["Target_ID"]] == lang:
                     try:
-                        # Get target embedding
+                        # Remove unknown tokens
                         self.targets.append(self.embeddings.vectors[self.embeddings.stoi[d["Target_keyword"]]])
                         self.src_lang.appand(self.lang_map[d["Source_ID"]])
                         self.target_lang.append(self.lang_map[d["Target_ID"]])
                         self.phrases.append(d["Source_text"])
+                
                     except KeyError:
                         print(d["Target_keyword"] + " not found")
 
@@ -129,16 +139,40 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         return tokens
 
     def preprocessing_data(self, idx, src = True):
+        
+        tokens = []
 
         if src:
             if self.src_lang[idx] != "en":
-                tokens = self.indic_tokenizer(self.phrases, self.src_lang[idx])
+                tokens = self.indic_tokenizer(self.phrases[idx], self.src_lang[idx])
             else:
-                tokens = self.en_tokenizer(self.phrases)
+                tokens = self.en_tokenizer(self.phrases[idx])
+
+        t_length = len(tokens)
+        
+        if t_length < self.max_seq_length:
+            pad_token_length = self.max_seq_length - t_length 
+            tokens.extend([self.vocabulary.pad_token]*pad_token_length)
+        else:
+            tokens = tokens[:self.max_seq_length]
 
         return tokens 
         
+    def tokens2tensor(self, tokens):
+        '''
+        Convert tokens to integer tensors
+        '''
 
+        input_id_vector = []
+
+        for t in tokens: 
+            if self.embeddings.stoi.get(t) is None:
+                input_id_vector.append(self.vocabulary.unk_token)
+            else:
+                input_id_vector.append(self.embeddings.stoi[t])
+        
+        input_id_vector = torch.Tensor(input_id_vector)
+        return input_id_vector
 
     def __getitem__(self, idx):
         '''
@@ -149,14 +183,13 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         '''
         
         tokens = self.preprocessing_data(idx, src=True)
-        
-        
-        # tokens = self.tokenizer(self.phrases[idx], padding="max_length", truncation=True, max_length=self.max_seq_length)
+        input_idx = self.tokens2tensor
+
         target = torch.tensor(self.targets[idx])
         label = torch.ones(target.shape[0], 1)
         return {
                 "phrase": {
-                            'input_ids': torch.tensor(tokens['input_ids']).squeeze(),
+                            'input_ids': input_idx.squeeze(),
                             'attention_mask': torch.tensor(tokens['attention_mask']).squeeze(),
                             'token_type_ids': torch.tensor(tokens['token_type_ids']).squeeze()
                           },
