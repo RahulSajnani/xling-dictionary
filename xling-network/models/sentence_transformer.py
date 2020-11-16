@@ -58,10 +58,9 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     word_embedding_model = models.Transformer('ai4bharat/indic-bert', max_seq_length=256)
-    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension())
-    linear_map = nn.Linear(word_embedding_model.get_word_embedding_dimension(), word_embedding_model.get_word_embedding_dimension())
-    activation = nn.Tanh()
-    model = SentenceTransformer(modules=[word_embedding_model, pooling_model, linear_map, activation])
+    pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(), pooling_mode_cls_token=True, pooling_mode_mean_token=False)
+    dense = models.Dense(word_embedding_model.get_word_embedding_dimension(), word_embedding_model.get_word_embedding_dimension())
+    model = SentenceTransformer(modules=[word_embedding_model, pooling_model, dense])
 
     with open(args.train_data, 'r') as f:
         data = json.load(f)
