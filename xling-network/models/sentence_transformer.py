@@ -61,7 +61,7 @@ if __name__=="__main__":
     pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension())
     linear_map = nn.Linear(word_embedding_model.get_word_embedding_dimension(), word_embedding_model.get_word_embedding_dimension())
     activation = nn.Tanh()
-    model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
+    model = SentenceTransformer(modules=[word_embedding_model, pooling_model, linear_map, activation])
 
     with open(args.train_data, 'r') as f:
         data = json.load(f)
@@ -75,18 +75,18 @@ if __name__=="__main__":
     model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=args.n_epochs, warmup_steps=100)
     model.save(args.model_path)
 
-    queries, corpus, relevant_docs = get_IR_data(args.test_data, args.index_dir)
+    # queries, corpus, relevant_docs = get_IR_data(args.test_data, args.index_dir)
 
-    for lang in queries:
-        if not lang in args.langs:
-            continue
+    # for lang in queries:
+    #     if not lang in args.langs:
+    #         continue
 
-        evaluator = evaluation.InformationRetrievalEvaluator(queries[lang], 
-                                                                corpus[lang], 
-                                                                relevant_docs[lang],
-                                                                mrr_at_k=args.k,
-                                                                ndcg_at_k=args.k,
-                                                                accuracy_at_k=args.k,
-                                                                precision_recall_at_k=args.k,
-                                                                map_at_k=args.k)
-        evaluator(model, output_path=os.path.join(args.results_dir, "{}.results".format(lang)))
+    #     evaluator = evaluation.InformationRetrievalEvaluator(queries[lang], 
+    #                                                             corpus[lang], 
+    #                                                             relevant_docs[lang],
+    #                                                             mrr_at_k=args.k,
+    #                                                             ndcg_at_k=args.k,
+    #                                                             accuracy_at_k=args.k,
+    #                                                             precision_recall_at_k=args.k,
+    #                                                             map_at_k=args.k)
+    #     evaluator(model, output_path=os.path.join(args.results_dir, "{}.results".format(lang)))
