@@ -14,17 +14,20 @@ import os
 import copy
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from helper_functions import *
 from transformers import AutoTokenizer
 import faiss
 from indicnlp.normalize.indic_normalize import IndicNormalizerFactory
-from indicnlp.tokenize import indic_tokenize  
+from indicnlp.tokenize import indic_tokenize
 import re
+import nltk
 from nltk.stem import WordNetLemmatizer
 import torchtext.vocab as vocab
 import torchtext
-
-
+import sys
+sys.path.append("../")
+from helper_functions import *
+nltk.download('wordnet')
+nltk.download("stopwords")
 
 class XLingualTrainDataset_baseline_lstm(Dataset):
     '''
@@ -44,10 +47,10 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         self.lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
         self.dataset = read_json_file(dataset_path)
         self.index_path = index_path
-        self.normalizers = self.get_indic_normalizers()
         self.factory = IndicNormalizerFactory()
         self.stemmer = WordNetLemmatizer()
-
+        self.normalizers = self.get_indic_normalizers()
+        self.en_stop = set(nltk.corpus.stopwords.words('english'))
 
         # Dataset params
         self.phrases = list()
@@ -56,10 +59,10 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         self.target_lang = list()
         self.max_seq_length = 128
         self.language_ids = {'HI': 0, 'BE': 1, 'GU': 2, 'OD': 3, 'PU': 4, 'EN': 5, 'MA': 6}
-        
+        self.get_dataset()
 
     def get_indic_normalizers(self):
-        
+
         '''
         Get indic nlp normalizers for preprocessing data
         '''
@@ -74,23 +77,23 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
 
         self.embeddings = vocab.Vectors(name = self.index_path, cache = self.cache_path)
         self.vocabulary = torchtext.data.Field()
-        
+
         # Adding pad and unk token
         self.embeddings.stoi[self.vocabulary.pad_token] = len(self.embeddings.stoi)
-        self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.pad_token]] = torch.ones(300)
+        self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.pad_token]] = torch.zeros(300)
         self.embeddings.stoi[self.vocabulary.unk_token] = len(self.embeddings.stoi)
-        self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.unk_token]] = torch.random.normal(300)
+        self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.unk_token]] = torch.zeros(300)
 
         for lang in ['en']:# ['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
-            for d in dataset:
+            for d in self.dataset:
                 if self.lang_map[d["Target_ID"]] == lang:
                     try:
                         # Remove unknown tokens
                         self.targets.append(self.embeddings.vectors[self.embeddings.stoi[d["Target_keyword"]]])
-                        self.src_lang.appand(self.lang_map[d["Source_ID"]])
+                        self.src_lang.append(self.lang_map[d["Source_ID"]])
                         self.target_lang.append(self.lang_map[d["Target_ID"]])
                         self.phrases.append(d["Source_text"])
-                
+
                     except KeyError:
                         print(d["Target_keyword"] + " not found")
 
@@ -119,7 +122,7 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         # Lemmatization
         tokens = document.split()
         tokens = [self.stemmer.lemmatize(word) for word in tokens]
-        tokens = [word for word in tokens if word not in en_stop]
+        tokens = [word for word in tokens if word not in self.en_stop]
         tokens = [word for word in tokens if len(word) > 3]
 
         return tokens
@@ -131,15 +134,15 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
 
         # Tokenize
         tokens = indic_tokenize.trivial_tokenize(text = text, lang = lang)
-        
+
         # Normalize
         for i in range(len(tokens)):
             tokens[i] = self.normalizers[lang].normalize(text)
-        
+
         return tokens
 
     def preprocessing_data(self, idx, src = True):
-        
+
         tokens = []
 
         if src:
@@ -149,15 +152,15 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
                 tokens = self.en_tokenizer(self.phrases[idx])
 
         t_length = len(tokens)
-        
+
         if t_length < self.max_seq_length:
-            pad_token_length = self.max_seq_length - t_length 
+            pad_token_length = self.max_seq_length - t_length
             tokens.extend([self.vocabulary.pad_token]*pad_token_length)
         else:
             tokens = tokens[:self.max_seq_length]
 
-        return tokens 
-        
+        return tokens
+
     def tokens2tensor(self, tokens):
         '''
         Convert tokens to integer tensors
@@ -165,13 +168,14 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
 
         input_id_vector = []
 
-        for t in tokens: 
+        for t in tokens:
             if self.embeddings.stoi.get(t) is None:
-                input_id_vector.append(self.vocabulary.unk_token)
+                input_id_vector.append(self.embeddings.stoi[self.vocabulary.unk_token])
             else:
                 input_id_vector.append(self.embeddings.stoi[t])
-        
+
         input_id_vector = torch.Tensor(input_id_vector)
+
         return input_id_vector
 
     def __getitem__(self, idx):
@@ -181,17 +185,15 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         Arguments:
             idx - text index
         '''
-        
+
         tokens = self.preprocessing_data(idx, src=True)
-        input_idx = self.tokens2tensor
+        input_idx = self.tokens2tensor(tokens)
 
         target = torch.tensor(self.targets[idx])
         label = torch.ones(target.shape[0], 1)
         return {
                 "phrase": {
                             'input_ids': input_idx.squeeze(),
-                            'attention_mask': torch.tensor(tokens['attention_mask']).squeeze(),
-                            'token_type_ids': torch.tensor(tokens['token_type_ids']).squeeze()
                           },
                 "target": target,
                 "label": label
@@ -210,8 +212,15 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(add_help=True)
 
-    dataset = XLingualTrainDataset_baseline_lstm(dataset_path="../data/filtered/validation.json", index_path="../models/index")
+    parser.add_argument("train_json", type=str)
+    parser.add_argument("emb", type=str)
+    parser.add_argument("emb_cache", type=str)
+    args = parser.parse_args()
+
+
+    dataset = XLingualTrainDataset_baseline_lstm(dataset_path=args.train_json, index_path=args.emb, cache_path = args.emb_cache)
     data_loader = DataLoader(dataset, batch_size=128, shuffle=True)
 
     for batch, data in enumerate(data_loader):
