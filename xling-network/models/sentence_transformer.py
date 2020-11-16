@@ -14,6 +14,10 @@ def get_IR_data(data_path, index_dir):
     for d in data:
         data_by_lang[d["Target_ID"]].append(d)
     
+    for lang, data in data_by_lang.items():
+        print("{} -> {}".format(lang, len(data)))
+    print(sum([len(data) for lang, data in data_by_lang.items()]))
+    
     queries, corpus, relevant_docs = dict(), dict(), dict()
     for lang, dataset in data_by_lang.items():
         lang_corpus = dict()
