@@ -25,6 +25,8 @@ class XlingualDictionary_lstm(pl.LightningModule):
         self.encoder = xling_encoder
         self.map = map_network
         self.activation = nn.Tanh()
+        self.encoder.embedding.weight.requires_grad = False
+        print("begin training")
 
     def predict_word(self, x, index_path, k=1):
         '''
@@ -44,15 +46,16 @@ class XlingualDictionary_lstm(pl.LightningModule):
         '''
         Forward pass
         '''
-        outputs = self.encoder(**x)
-        sequence_embedding = outputs[1]
+        print("stop")
+        outputs = self.encoder(x)
+        sequence_embedding = outputs
         y_hat = self.activation(self.map(sequence_embedding))
 
         return y_hat
 
     def training_step(self, batch, batch_idx):
 
-        x, y, label =  batch["phrase"], batch["target"], batch["label"]
+        x, y, label =  batch["phrase"]["input_ids"], batch["target"], batch["label"]
         y_hat = self.forward(x)
         loss = F.cosine_embedding_loss(y_hat, y, label)
 
@@ -62,7 +65,7 @@ class XlingualDictionary_lstm(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
 
-        x, y, label =  batch["phrase"], batch["target"], batch["label"]
+        x, y, label =  batch["phrase"]["input_ids"], batch["target"], batch["label"]
         y_hat = self.forward(x)
         loss = F.cosine_embedding_loss(y_hat, y, label)
         self.log('val_loss', loss)
@@ -74,7 +77,7 @@ class XlingualDictionary_lstm(pl.LightningModule):
         Configure optimizers for lightning module
         '''
 
-        return AdamW(self.parameters(), lr=1e-5)
+        return torch.optim.Adam(self.parameters(), lr=1e-5)
 
     # def
 
@@ -104,7 +107,7 @@ if __name__=="__main__":
 
     print( EMBEDDING_DIM, PAD_IDX, UNK_IDX)
 
-    encoder = LSTM_model(vocab_size = len(train_dataset.embeddings), input_dim = EMBEDDING_DIM, hidden_size = (EMBEDDING_DIM), num_layers = 5, padding_idx = PAD_IDX)
+    encoder = LSTM_model(vocab_size = len(train_dataset.embeddings), input_dim = EMBEDDING_DIM, hidden_size = (EMBEDDING_DIM), num_layers = 2, padding_idx = PAD_IDX)
 
     encoder.embedding.weight.data.copy_(train_dataset.embeddings.vectors)
     map_network = torch.nn.Identity() #torch.nn.Linear(encoder.config.hidden_size, encoder.config.hidden_size)
@@ -113,5 +116,6 @@ if __name__=="__main__":
     encoder.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
     encoder.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
+    encoder.embedding.weight.requires_grad = False
     model = XlingualDictionary_lstm(encoder, map_network)
     trainer.fit(model, train_dataloader, val_dataloader)

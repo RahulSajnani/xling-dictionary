@@ -25,17 +25,15 @@ class LSTM_model(nn.Module):
         # Set initial hidden states (and cell states for LSTM)
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        out, _ = self.lstm(self.embedding(x).view(len(x), 1, -1), (h0,c0))
+        out = self.drop_layer(out)
+        out = self.activation(out[:, -1, :])
 
         # x: (n, 28, 28), h0: (2, n, 128)
-
-        # Forward propagate RNN
-        out, _ = self.lstm(self.embedding(x), (h0,c0))
-        out = self.drop_layer(out)
         # out: tensor of shape (batch_size, seq_length, hidden_size)
-        # out: (n, 28, 128)
+        # out: (n, 28, 300)
 
         # Decode the hidden state of the last time step
-        out = self.activation(out[:, -1, :])
         # out: (n, 300)
         #
         return out

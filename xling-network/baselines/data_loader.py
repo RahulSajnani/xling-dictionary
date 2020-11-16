@@ -97,7 +97,8 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
                         self.phrases.append(d["Source_text"])
 
                     except KeyError:
-                        print(d["Target_keyword"] + " not found")
+                        #print(d["Target_keyword"] + " not found")
+                        pass
 
     def en_tokenizer(self, document):
         '''
@@ -139,7 +140,7 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
 
         # Normalize
         for i in range(len(tokens)):
-            tokens[i] = self.normalizers[lang].normalize(text)
+            tokens[i] = self.normalizers[lang].normalize(tokens[i])
 
         return tokens
 
@@ -176,7 +177,7 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
             else:
                 input_id_vector.append(self.embeddings.stoi[t])
 
-        input_id_vector = torch.Tensor(input_id_vector)
+        input_id_vector = torch.tensor(input_id_vector)
 
         return input_id_vector
 
