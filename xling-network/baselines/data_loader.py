@@ -48,6 +48,7 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         self.lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
         self.dataset = read_json_file(dataset_path)
         self.index_path = index_path
+        print(self.index_path, self.cache_path)
         self.factory = IndicNormalizerFactory()
         self.stemmer = WordNetLemmatizer()
         self.normalizers = self.get_indic_normalizers()

@@ -20,24 +20,24 @@ class LSTM_model(nn.Module):
         self.dropout_layer = nn.Dropout(p=0.2)
         self.fc = nn.Linear(hidden_size, input_dim)
         self.activation = nn.Tanh()
-        
+
     def forward(self, x):
         # Set initial hidden states (and cell states for LSTM)
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-        
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+
         # x: (n, 28, 28), h0: (2, n, 128)
-        
+
         # Forward propagate RNN
-        out, _ = self.lstm(x, (h0,c0))  
-		out = self.drop_layer(out)
+        out, _ = self.lstm(self.embedding(x), (h0,c0))
+        out = self.drop_layer(out)
         # out: tensor of shape (batch_size, seq_length, hidden_size)
         # out: (n, 28, 128)
-        
+
         # Decode the hidden state of the last time step
         out = self.activation(out[:, -1, :])
         # out: (n, 300)
-        #   
+        #
         return out
 
 class LSTMClassifier(nn.Module):
@@ -48,7 +48,7 @@ class LSTMClassifier(nn.Module):
 
 		self.embedding_dim = embedding_dim
 		self.hidden_dim = hidden_dim
-		
+
 		self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers)
 
 		# self.hidden2out = nn.Linear(hidden_dim, output_size)
@@ -61,7 +61,7 @@ class LSTMClassifier(nn.Module):
 
 
 	def forward(self, batch, lengths):
-		
+
 		self.hidden = self.init_hidden(batch.size(-1))
 
 		packed_input = pack_padded_sequence(batch, lengths)
