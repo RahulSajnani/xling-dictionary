@@ -55,10 +55,39 @@ def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
     return correct / total
 
 
+def xlingual_reverse_dictionary(model, index_dir, k):
 
+    model.eval()
+
+    tokenizer = AutoTokenizer.from_pretrained("ai4bharat/indic-bert")
+
+    #lang_map = {"EN": "en"}
+    lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+    data_by_lang = defaultdict(list)
+    vocab = {}
+
+
+    for lang in lang_map.keys():
+        with open(os.path.join(index_dir, lang_map[lang] + ".vocab"), 'r') as f:
+            vocab[lang_map[lang]] = [line.strip() for line in f]
+
+    
+    lang = raw_input("Enter output language from HI-BE-GU-OD-PU-EN-MA")
+    
+    with torch.no_grad():
+        while (1):
+            phrases = raw_input("Enter source phrase:")
+            phrases = [phrases]
+            tokens = tokenizer(phrases, padding="max_length", truncation=True, max_length=128, return_tensors="pt")
+            tokens.to('cuda')
+            _, I = model(tokens, os.path.join(index_dir, lang_map[lang] + ".index"), k)
+            words = [[vocab[i] for i in row] for row in I]
+            for word in words[0]:
+                print(word + "\n")
+            # print(words)
+            #print(words)
 
 if __name__ == "__main__":
-
 
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("test_data", type=str)
@@ -70,4 +99,8 @@ if __name__ == "__main__":
 
     model = XlingualDictionary.load_from_checkpoint(args.model_path)
     model.to('cuda')
-    print(get_accuracy(read_json_file(args.test_data), model, args.index_dir, args.k))
+
+    if args.test_data == "test":
+        xlingual_reverse_dictionary(model, index_dir=args.index_dir, k = args.k)
+    elif os.path.exists(args.test_data):
+        print(get_accuracy(read_json_file(args.test_data), model, args.index_dir, args.k))
