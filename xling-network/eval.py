@@ -54,6 +54,9 @@ def get_accuracy(test_data, model, index_dir, k=10, batch_size=32):
 
     return correct / total
 
+
+
+
 if __name__ == "__main__":
 
 
