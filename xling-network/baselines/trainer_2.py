@@ -13,94 +13,93 @@ sys.path.append("../")
 from models.lstm import LSTM_model
 import time
 
-class trainer(object):
+class Trainer(object):
 
     def __init__(self, xling_encoder, map_network):
 
         self.encoder = xling_encoder
         self.map = map_network
         self.activation = nn.Tanh()
-        
-    def evaluate(model, loader, criterion):
-        
-        epoch_loss = 0        
+
+    def evaluate(self, model, loader, criterion):
+
+        epoch_loss = 0
         model.eval()
-        
+        total = 0
         with torch.no_grad():
-        
-            for batch in loader:
-                
-                x, y, label =  batch["phrase"]["input_ids"], batch["target"], batch["label"]
+
+            for i, batch in enumerate(loader):
+                #batch = batch.cuda()
+                x, y, label =  batch["phrase"]["input_ids"].cuda(), batch["target"].cuda(), batch["label"].cuda()
                 predictions = model(x)
-                loss = criterion(predictions, y, label)    
-                loss = criterion(predictions, batch.label)
+                loss = criterion(predictions, y, label)
                 epoch_loss += loss.item()
-            
-        return epoch_loss / len(loader)
+                total+=1
+
+        return epoch_loss / total
 
 
-    def train(model, loader, optimizer, criterion):
-        
+    def train_step(self, model, loader, optimizer, criterion):
+
         epoch_loss = 0
 
-        
         model.train()
-        
-        for batch in enumerate(loader):
-            
+        total=0
+        for i, batch in enumerate(loader):
+            #batch = batch.cuda()
+            total+=1
             optimizer.zero_grad()
-            x, y, label =  batch["phrase"]["input_ids"], batch["target"], batch["label"]
+            x, y, label =  batch["phrase"]["input_ids"].cuda(), batch["target"].cuda(), batch["label"].cuda()
             predictions = model(x)
             loss = criterion(predictions, y, label)
-            loss.backward()                
+            loss.backward()
             optimizer.step()
-            
             epoch_loss += loss.item()
-            
-                    
-        return epoch_loss / len(loader)
-    
+
+
+        return epoch_loss / total
+
     def epoch_time(self, start_time, end_time):
         elapsed_time = end_time - start_time
         elapsed_mins = int(elapsed_time / 60)
         elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
-   
-        return elapsed_mins, elapsed_secs
-   
-    def train(self, train_dataloader, val_dataloader):
-        
-        N_EPOCHS = 10
-        
 
-        model = self.encoder
-        optimizer = torch.optim.Adam(model.parameters())
+        return elapsed_mins, elapsed_secs
+
+    def train(self, train_dataloader, val_dataloader, epochs):
+
+        N_EPOCHS = epochs
+
+
+        model = self.encoder.cuda()
+        optimizer = torch.optim.Adam(model.parameters(), lr = 1e-5)
         criterion = nn.CosineEmbeddingLoss()
-        
+
         best_valid_loss = float('inf')
 
         #freeze embeddings
         model.embedding.weight.requires_grad = False
 
         for epoch in range(N_EPOCHS):
-
+            print(epoch)
             start_time = time.time()
-            
-            train_loss = self.train(model, train_dataloader, optimizer, criterion)
+
+            train_loss = self.train_step(model, train_dataloader, optimizer, criterion)
             valid_loss = self.evaluate(model, val_dataloader, criterion)
-            
+
             end_time = time.time()
 
             epoch_mins, epoch_secs = self.epoch_time(start_time, end_time)
-            
+
             print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
             print(f'\tTrain Loss: {train_loss:.3f} ')
             print(f'\t Val. Loss: {valid_loss:.3f} ')
-            
+
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
                 torch.save(model.state_dict(), './best_lstm-model.pt')
-            
-         
+
+
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser(add_help=True)
@@ -130,4 +129,5 @@ if __name__=="__main__":
 
     encoder.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
     encoder.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
-
+    trainer = Trainer(encoder, map_network)
+    trainer.train(train_dataloader, val_dataloader, args.n_epochs)

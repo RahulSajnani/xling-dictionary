@@ -23,10 +23,10 @@ class LSTM_model(nn.Module):
 
     def forward(self, x):
         # Set initial hidden states (and cell states for LSTM)
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        out, _ = self.lstm(self.embedding(x).view(len(x), 1, -1), (h0,c0))
-        out = self.drop_layer(out)
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).cuda()
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).cuda()
+        out, _ = self.lstm(self.embedding(x), (h0,c0))
+        out = self.dropout_layer(out)
         out = self.activation(out[:, -1, :])
 
         # x: (n, 28, 28), h0: (2, n, 128)

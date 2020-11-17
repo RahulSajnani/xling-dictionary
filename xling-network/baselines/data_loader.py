@@ -192,7 +192,8 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         tokens = self.preprocessing_data(idx, src=True)
         input_idx = self.tokens2tensor(tokens)
 
-        target = torch.tensor(self.targets[idx])
+        #target = torch.tensor(self.targets[idx])
+        target = (self.targets[idx])
         label = torch.ones(target.shape[0], 1)
         return {
                 "phrase": {
