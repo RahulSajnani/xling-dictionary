@@ -71,19 +71,22 @@ def xlingual_reverse_dictionary(model, index_dir, k):
         with open(os.path.join(index_dir, lang_map[lang] + ".vocab"), 'r') as f:
             vocab[lang_map[lang]] = [line.strip() for line in f]
 
-    
-    lang = raw_input("Enter output language from HI-BE-GU-OD-PU-EN-MA")
-    
+
+    lang = input("Enter output language from HI-BE-GU-OD-PU-EN-MA \n")
+
     with torch.no_grad():
         while (1):
-            phrases = raw_input("Enter source phrase:")
-            phrases = [phrases]
+            phrases = input("Enter source phrase:\n")
+            phrases = [phrases.lower()]
+
+            print(phrases)
             tokens = tokenizer(phrases, padding="max_length", truncation=True, max_length=128, return_tensors="pt")
             tokens.to('cuda')
             _, I = model(tokens, os.path.join(index_dir, lang_map[lang] + ".index"), k)
-            words = [[vocab[i] for i in row] for row in I]
+            print(I)
+            words = [[vocab[lang_map[lang]][i] for i in row] for row in I]
             for word in words[0]:
-                print(word + "\n")
+                print(word)
             # print(words)
             #print(words)
 
