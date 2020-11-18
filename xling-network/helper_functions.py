@@ -47,6 +47,8 @@ if __name__ == "__main__":
 
         if p_len > length:
             length = p_len
+        if i["Target_ID"] == "EN":
+            print(phrase, i["Target_keyword"])
         language_idx = i["Source_ID"]
         language_idx_t = i["Target_ID"]
         if language_idx not in language_dictionary:
@@ -58,5 +60,5 @@ if __name__ == "__main__":
             ids = ids + 1
 
         # print(i)
-    print(language_dictionary)
-    print(length)
+    # print(language_dictionary)
+    # print(length)
