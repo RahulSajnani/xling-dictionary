@@ -99,7 +99,13 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
                     except KeyError:
                         #print(d["Target_keyword"] + " not found")
                         pass
+    
+    def get_mean_embeddings(self, list_idx):
 
+        out = self.embeddings.vectors[list_idx].mean(0)
+
+        return out.unsqueeze(0)
+        
     def en_tokenizer(self, document):
         '''
         Borrowed preprocessing script from https://stackabuse.com/python-for-nlp-working-with-facebook-fasttext-library/
