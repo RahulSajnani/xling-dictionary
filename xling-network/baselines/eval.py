@@ -82,9 +82,9 @@ def get_accuracy(test_data, model, index_dir, test_dataset, k=10, batch_size=32)
                     correct+=1
 
                 total += 1
-
-            if total % (10 * batch_size) == 0:
-                print("{} samples processed {}".format(b, correct/total))
+                print(correct/total)
+                if total % ( batch_size) == 0:
+                    print("{} samples processed {}".format(b, correct/total))
 
         print("{} done!".format(lang))
 
