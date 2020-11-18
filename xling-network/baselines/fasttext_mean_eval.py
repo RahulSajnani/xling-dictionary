@@ -26,7 +26,7 @@ def preprocess_text(phrase, src_lang, target_word, dataset):
 
     #target = torch.tensor(self.targets[idx])
     #target = (target_word)
-    mean_embedding = dataset.get_mean_embeddings(tokens)
+    mean_embedding = dataset.get_mean_embeddings(input_idx)
     label = torch.ones(input_idx.shape[0], 1)
     return {
             "phrase": {
@@ -66,12 +66,13 @@ def get_accuracy(test_data, model, index_dir, test_dataset, k=10, batch_size=32)
                 src_lang = lang_map[lang]
                 target_word = targets[i]
 
-                
+
                 batch = preprocess_text(phrase, src_lang, target_word, test_dataset)
 
-                x, label =  batch["phrase"]["input_ids"].unsqueeze(0).cuda(),  batch["label"].unsqueeze(0).cuda()
-                x = 
-                y_hat = model(x)
+                #x, label =  batch["phrase"]["input_ids"].unsqueeze(0).cuda(),  batch["label"].unsqueeze(0).cuda()
+                x = batch["mean_ft"]
+                y_hat = x
+                #y_hat = model(x)
                 #y_hat = y_hat.squeeze()
                 #print(y_hat.shape)
                 index = faiss.read_index(os.path.join(index_dir, lang_map[lang] + ".index"))
