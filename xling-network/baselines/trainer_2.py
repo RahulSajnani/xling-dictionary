@@ -12,6 +12,7 @@ import sys
 sys.path.append("../")
 from models.lstm import LSTM_model
 import time
+import gc
 
 class Trainer(object):
 
@@ -33,7 +34,7 @@ class Trainer(object):
                 x, y, label =  batch["phrase"]["input_ids"].cuda(), batch["target"].cuda(), batch["label"].cuda()
                 predictions = model(x)
                 loss = criterion(predictions, y, label)
-                epoch_loss += loss.item()
+                epoch_loss += loss.detach().item()
                 total+=1
 
         return epoch_loss / total
@@ -54,7 +55,8 @@ class Trainer(object):
             loss = criterion(predictions, y, label)
             loss.backward()
             optimizer.step()
-            epoch_loss += loss.item()
+            epoch_loss += loss.detach().item()
+
 
 
         return epoch_loss / total
@@ -111,10 +113,10 @@ if __name__=="__main__":
 
     args = parser.parse_args()
     train_dataset = data_loader.XLingualTrainDataset_baseline_lstm(args.train_data, args.emb_path, args.emb_dir)
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=10, drop_last = True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=5, drop_last = True)
 
     val_dataset = data_loader.XLingualTrainDataset_baseline_lstm(args.val_data, args.emb_path, args.emb_dir)
-    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=10, drop_last = True)
+    val_dataloader = DataLoader(val_dataset, batch_size=32, num_workers=5, drop_last = True)
 
     EMBEDDING_DIM = train_dataset.embeddings.vectors[0].shape[0]
     PAD_IDX = train_dataset.embeddings.stoi[train_dataset.vocabulary.pad_token]
