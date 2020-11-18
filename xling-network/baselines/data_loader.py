@@ -86,7 +86,7 @@ class XLingualTrainDataset_baseline_lstm(Dataset):
         self.embeddings.stoi[self.vocabulary.unk_token] = len(self.embeddings.stoi)
         self.embeddings.vectors[self.embeddings.stoi[self.vocabulary.unk_token]] = torch.zeros(300)
 
-        for lang in ['en']:# ['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
+        for lang in ['en', 'hi', 'gu', 'pa', 'or', 'mr', 'bn']:
             for d in self.dataset:
                 if self.lang_map[d["Target_ID"]] == lang:
                     try:

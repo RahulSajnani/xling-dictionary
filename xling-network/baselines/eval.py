@@ -39,7 +39,8 @@ def get_accuracy(test_data, model, index_dir, test_dataset, k=10, batch_size=32)
 
     model.eval()
 
-    lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+    #lang_map = {'HI': 'hi', 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
+    lang_map = {'EN': 'en'} #, 'BE': 'bn', 'GU': 'gu', 'OD': 'or', 'PU': 'pa', 'EN': 'en', 'MA': 'mr'}
     data_by_lang = defaultdict(list)
 
     for d in test_data:

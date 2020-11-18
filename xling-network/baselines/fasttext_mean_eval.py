@@ -58,6 +58,7 @@ def get_accuracy(test_data, model, index_dir, test_dataset, k=10, batch_size=32)
         targets = [d["Target_keyword"] for d in data_by_lang[lang]]
         b = 0
 
+        index = faiss.read_index(os.path.join(index_dir, lang_map[lang] + ".index"))
         with torch.no_grad():
 
             for i in range(len(phrases)):
@@ -75,7 +76,6 @@ def get_accuracy(test_data, model, index_dir, test_dataset, k=10, batch_size=32)
                 #y_hat = model(x)
                 #y_hat = y_hat.squeeze()
                 #print(y_hat.shape)
-                index = faiss.read_index(os.path.join(index_dir, lang_map[lang] + ".index"))
                 # embeddings = torch.mean(outputs.last_hidden_state, 1).detach().cpu().numpy()
                 y_hat = y_hat.detach().cpu().numpy()
                 faiss.normalize_L2(y_hat)
@@ -87,9 +87,9 @@ def get_accuracy(test_data, model, index_dir, test_dataset, k=10, batch_size=32)
                     correct+=1
 
                 total += 1
-                print(correct/total)
+                #print(correct/total)
                 if total % ( batch_size) == 0:
-                    print("{} samples processed {}".format(b, correct/total))
+                    print("{} samples processed {}".format(total, correct/total))
 
         print("{} done!".format(lang))
 
